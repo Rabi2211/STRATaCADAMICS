@@ -1,0 +1,10 @@
+/* MarketInventory – page-specific styles (scoped under .dash). Shared styles live in src/styles/dashboard.css */
+
+.dash .qty {
+  display:inline-flex;
+  gap:12px;
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:4px 10px;
+  background:#fffefd;
+}

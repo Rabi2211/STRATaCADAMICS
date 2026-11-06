@@ -1,0 +1,38 @@
+/* MarketOrders – page-specific styles (scoped under .dash). Shared styles live in src/styles/dashboard.css */
+
+.dash .split {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 360px;
+}
+.dash .split>.panel {
+  border-left:1px solid var(--line);
+  padding-left:20px;
+  margin-left:20px;
+}
+
+
+.dash .ord {
+  display:flex;
+  gap:10px;
+  padding:12px 0;
+  border-top:1px solid var(--line);
+}
+.dash .ord .acts {
+  margin-top:8px;
+}
+
+.dash .tabs {
+  display:flex;
+  gap:26px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.dash .tabs a {
+  padding:8px 2px;
+  color:var(--mute);
+}
+.dash .tabs a.on {
+  color:var(--acc);
+  border-bottom:2px solid var(--acc);
+}

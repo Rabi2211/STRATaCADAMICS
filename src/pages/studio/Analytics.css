@@ -1,0 +1,35 @@
+/* StudioAnalytics – page-specific styles (scoped under .dash). Shared styles live in src/styles/dashboard.css */
+
+.dash .bar {
+  height:8px;
+  background:#ece6dd;
+  border-radius:9px;
+  overflow:hidden;
+}
+.dash .bar i {
+  display:block;
+  height:100%;
+  background:var(--acc);
+}
+
+.dash .seg {
+  display:inline-flex;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:2px;
+}
+.dash .seg span {
+  padding:3px 12px;
+  border-radius:999px;
+  font-size:12px;
+}
+.dash .seg .on {
+  background:var(--acc);
+  color:#fff;
+}
+
+.dash .chart {
+  width:100%;
+  height:auto;
+  display:block;
+}
