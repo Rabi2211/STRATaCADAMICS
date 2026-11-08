@@ -16,8 +16,8 @@ export interface FooterColumn {
 export const SECTIONS: Section[] = ["Men", "Women", "Kids"];
 
 export const PROMOS: Promo[] = [
-  { id: "tee", image: "/images/promo-tee.jpg", cta: "Shop For Men", variant: "half" },
-  { id: "hoodie", image: "/images/promo-hoodie.jpg", cta: "Shop For Men", variant: "half" },
+  { id: "tee", image: "/images/round-pattern-woven-basket-21232550-1.png", cta: "Shop For Men", variant: "half" },
+  { id: "hoodie", image: "/images/top-view-plant-in-pot-on-wood-table-free-photo-1.png", cta: "Shop For Men", variant: "half" },
 ];
 
 export const FOOTER_COLUMNS: FooterColumn[] = [

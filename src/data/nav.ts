@@ -26,8 +26,8 @@ export const NAV: Record<Kind, NavConfig> = {
     ],
   },
   market: {
-    label: "Market",
-    tagline: ["ONE MARKETPLACE.", "MANY INDEPENDENT BRANDS."],
+    label: "Store owner portal",
+    tagline: ["STORE DATA.", "ONE OWNER. MANY BRANDS."],
     items: [
       { label: "Overview", to: "/market/overview" },
       { label: "Brands", to: "/market/brands" },

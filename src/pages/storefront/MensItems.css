@@ -1,25 +1,20 @@
 /* Men's Items – page-specific styles (scoped under .sf) */
 
+.sf .page {
+  max-width: none;
+  width: 100%;
+}
+
 .sf .mhero {
   position:relative;
-  min-height:330px;
-  background:linear-gradient(180deg,#b8a98a,#9a9a6e 55%,#7b7a54);
+  min-height:calc(100vh - 5px);
+  background-image:url('/images/IMG-1.png');
+  background-size:cover;
+  background-position:center;
   display:flex;
   flex-direction:column;
   justify-content:flex-end;
   padding:0 12px 14px;
-}
-.sf .mhero::before {
-  content:"";
-  position:absolute;
-  left:50%;
-  top:14px;
-  transform:translateX(-50%);
-  width:34%;
-  height:70%;
-  background:#efece6;
-  border-radius:40% 40% 8% 8%;
-  box-shadow:0 8px 24px rgba(0,0,0,.25);
 }
 .sf .mhero .display {
   position:relative;
@@ -31,12 +26,14 @@
   display:flex;
   justify-content:space-between;
   gap:10px;
+  height: 27px;
+  width: min(72%, 520px);
 }
 .sf .chips a {
   flex:1;
   text-align:center;
   background:var(--cream);
-  border:1px solid var(--brown);
+  border:4px solid var(--brown);
   padding:3px 4px;
   font-size:7px;
   font-weight:600;

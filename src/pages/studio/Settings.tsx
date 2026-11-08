@@ -1,16 +1,19 @@
 import DashboardLayout from "../../components/DashboardLayout";
+import { STORE } from "../../data/store";
 import "./Settings.css";
 
 export default function StudioSettings() {
+  const brand = STORE.brands[0];
+
   return (
     <DashboardLayout
       kind="studio"
       title={"Store settings"}
-      subtitle={"Manage your store details, policies and preferences."}
+      subtitle={`Manage ${brand?.name ?? "your brand"} details, policies and preferences within the shared store.`}
       actions={
         <>
           <div className="card">
-            STRATA
+            {brand?.abbreviation ?? "BR"}
             {" "}
             <span className="sub">SELLER STUDIO</span>
           </div>
@@ -31,11 +34,11 @@ export default function StudioSettings() {
             <div className="grid g2">
               <div className="field">
                 <label>Brand name</label>
-                <input defaultValue={"STRATA"} />
+                <input defaultValue={brand?.name ?? "Your brand"} />
               </div>
               <div className="field">
                 <label>Store URL</label>
-                <input defaultValue={"strata-studio.myshopify.com"} />
+                <input defaultValue={`${(brand?.name ?? "your-brand").toLowerCase().replace(/\s+/g, "-")}.strata.store`} />
               </div>
             </div>
             <label>
@@ -43,7 +46,7 @@ export default function StudioSettings() {
             </label>
             <div className="grid g21">
               <div className="card" style={{textAlign: "center"}}>
-                <b style={{fontSize: "20px"}}>STRATA</b>
+                <b style={{fontSize: "20px"}}>{brand?.abbreviation ?? "BR"}</b>
               </div>
               <div className="drop">
                 ⬆ Upload logo
@@ -52,11 +55,11 @@ export default function StudioSettings() {
             </div>
             <div className="field">
               <label>Contact email</label>
-              <input defaultValue={"hello@strata-studio.com"} />
+              <input defaultValue={`hello@${(brand?.name ?? "brand").toLowerCase().replace(/\s+/g, "-")}.store`} />
             </div>
             <div className="field">
               <label>Storefront description</label>
-              <textarea defaultValue={"Independent clothing for creative minds. Minimal pieces. Maximum impact."} />
+              <textarea defaultValue={`Independent essentials for ${brand?.category?.toLowerCase() ?? "modern living"}. Curated pieces for a refined everyday wardrobe.`} />
             </div>
           </section>
           <section className="card ">

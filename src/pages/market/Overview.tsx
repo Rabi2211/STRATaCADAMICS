@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
 import "./Overview.css";
 
@@ -6,12 +7,12 @@ export default function MarketOverview() {
     <DashboardLayout
       kind="market"
       title={"Store overview"}
-      subtitle={"Manage your entire marketplace — brands, products, orders, inventory and more."}
+      subtitle={"Manage your entire store — brands, products, orders, inventory and more from one owner account."}
       actions={
         <>
           <button className="btn ">📅 Apr 20, 2025 – May 20, 2025 ▾</button>
           🔔
-          <button className="btn pri">View storefront ↗</button>
+          <Link to="/" className="btn pri">View storefront ↗</Link>
         </>
       }
     >

@@ -1,17 +1,22 @@
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
+import { STORE, STORE_SUMMARY } from "../../data/store";
 import "./Overview.css";
 
 export default function StudioOverview() {
+  const brand = STORE.brands[0];
+  const totalOrders = STORE.products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
+
   return (
     <DashboardLayout
       kind="studio"
-      title={"Good morning, Alex"}
-      subtitle={"Here's what happening with your store today."}
+      title={`Good morning, ${brand?.name ?? "brand owner"}`}
+      subtitle={`Here's what's happening with ${brand?.name ?? "your store"} today.`}
       actions={
         <>
           <button className="btn ">📅 Apr 21, 2025 – Apr 27, 2025 ▾</button>
           🔔
-          <button className="btn pri">View storefront ↗</button>
+          <Link to="/" className="btn pri">View storefront ↗</Link>
         </>
       }
     >
@@ -20,7 +25,7 @@ export default function StudioOverview() {
           <div className="ic" />
           <div>
             <span>Gross sales</span>
-            <b>R8,420</b>
+            <b>R{STORE_SUMMARY.totalRevenue.toLocaleString()}</b>
             <span className="up">▲ +12.8%</span>
             {" "}
             <span>vs. previous 7 days</span>
@@ -30,7 +35,7 @@ export default function StudioOverview() {
           <div className="ic" />
           <div>
             <span>Orders</span>
-            <b>126</b>
+            <b>{totalOrders}</b>
             <span className="up">▲ +12.8%</span>
             {" "}
             <span>vs. previous 7 days</span>
@@ -40,7 +45,7 @@ export default function StudioOverview() {
           <div className="ic" />
           <div>
             <span>Product views</span>
-            <b>18,640</b>
+            <b>{STORE_SUMMARY.totalProducts * 1640}</b>
             <span className="up">▲ +8.2%</span>
             {" "}
             <span>vs. previous 7 days</span>

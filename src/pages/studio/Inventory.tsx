@@ -1,12 +1,17 @@
 import DashboardLayout from "../../components/DashboardLayout";
+import { STORE, STORE_SUMMARY, getInventoryRows } from "../../data/store";
 import "./Inventory.css";
 
 export default function StudioInventory() {
+  const rows = getInventoryRows();
+  const brand = STORE.brands[0];
+  const brandRows = rows.filter((product) => product.brandId === brand?.id);
+
   return (
     <DashboardLayout
       kind="studio"
       title={"Inventory"}
-      subtitle={"Track stock levels and manage inventory across your products."}
+      subtitle={`Track stock levels for ${brand?.name ?? "your brand"} across the shared store catalog.`}
       actions={
         <>
           <button className="btn ">⬇ Export</button>
@@ -29,7 +34,7 @@ export default function StudioInventory() {
           <div className="ic" />
           <div>
             <span>Total units</span>
-            <b>8,420</b>
+            <b>{STORE_SUMMARY.totalUnits}</b>
             {" "}
             <span>Across all products</span>
           </div>
@@ -38,16 +43,16 @@ export default function StudioInventory() {
           <div className="ic" />
           <div>
             <span>Low stock</span>
-            <b>7</b>
+            <b>{STORE_SUMMARY.lowStockProducts}</b>
             {" "}
-            <span>≤ 10 units remaining</span>
+            <span>≤ 25 units remaining</span>
           </div>
         </div>
         <div className="card stat">
           <div className="ic" />
           <div>
             <span>Out of stock</span>
-            <b>3</b>
+            <b>{rows.filter((product) => product.available === 0).length}</b>
             {" "}
             <span>No units available</span>
           </div>
@@ -55,10 +60,10 @@ export default function StudioInventory() {
         <div className="card stat">
           <div className="ic" />
           <div>
-            <span>Preorder units</span>
-            <b>542</b>
+            <span>Brand units</span>
+            <b>{brandRows.reduce((sum, product) => sum + product.available, 0)}</b>
             {" "}
-            <span>Awaiting fulfillment</span>
+            <span>For {brand?.name}</span>
           </div>
         </div>
       </div>
@@ -77,155 +82,31 @@ export default function StudioInventory() {
                 <th>Quantity</th>
                 <th>Actions</th>
               </tr>
-              <tr>
-                <td>☐</td>
-                <td>
-                  <span className="thumb t1" />
-                  New Punk Hoodie
-                  <span className="sub">NP-HOOD-001</span>
-                </td>
-                <td>42</td>
-                <td>8</td>
-                <td>15</td>
-                <td>
-                  <span className="pill green">In stock</span>
-                </td>
-                <td>
-                  <span className="qty">− 42 +</span>
-                </td>
-                <td>⋯</td>
-              </tr>
-              <tr>
-                <td>☐</td>
-                <td>
-                  <span className="thumb t2" />
-                  Graphic Tee
-                  <span className="sub">GT-TEE-002</span>
-                </td>
-                <td>8</td>
-                <td>2</td>
-                <td>0</td>
-                <td>
-                  <span className="pill orange">Low stock</span>
-                </td>
-                <td>
-                  <span className="qty">− 8 +</span>
-                </td>
-                <td>⋯</td>
-              </tr>
-              <tr>
-                <td>☐</td>
-                <td>
-                  <span className="thumb t3" />
-                  Canvas Tote
-                  <span className="sub">CT-TOTE-003</span>
-                </td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
-                <td>
-                  <span className="pill orange">Out of stock</span>
-                </td>
-                <td>
-                  <span className="qty">− 0 +</span>
-                </td>
-                <td>⋯</td>
-              </tr>
-              <tr>
-                <td>☐</td>
-                <td>
-                  <span className="thumb t4" />
-                  Vintage Tee
-                  <span className="sub">VT-TEE-004</span>
-                </td>
-                <td>16</td>
-                <td>5</td>
-                <td>0</td>
-                <td>
-                  <span className="pill green">In stock</span>
-                </td>
-                <td>
-                  <span className="qty">− 16 +</span>
-                </td>
-                <td>⋯</td>
-              </tr>
-              <tr>
-                <td>☐</td>
-                <td>
-                  <span className="thumb t5" />
-                  Classic Cap
-                  <span className="sub">CP-CAP-005</span>
-                </td>
-                <td>3</td>
-                <td>1</td>
-                <td>12</td>
-                <td>
-                  <span className="pill orange">Low stock</span>
-                </td>
-                <td>
-                  <span className="qty">− 3 +</span>
-                </td>
-                <td>⋯</td>
-              </tr>
-              <tr>
-                <td>☐</td>
-                <td>
-                  <span className="thumb t6" />
-                  Utility Jacket
-                  <span className="sub">UJ-JKT-006</span>
-                </td>
-                <td>0</td>
-                <td>2</td>
-                <td>25</td>
-                <td>
-                  <span className="pill orange">Out of stock</span>
-                </td>
-                <td>
-                  <span className="qty">− 0 +</span>
-                </td>
-                <td>⋯</td>
-              </tr>
-              <tr>
-                <td>☐</td>
-                <td>
-                  <span className="thumb t1" />
-                  Crew Socks
-                  <span className="sub">SK-SOC-007</span>
-                </td>
-                <td>128</td>
-                <td>12</td>
-                <td>0</td>
-                <td>
-                  <span className="pill green">In stock</span>
-                </td>
-                <td>
-                  <span className="qty">− 128 +</span>
-                </td>
-                <td>⋯</td>
-              </tr>
-              <tr>
-                <td>☐</td>
-                <td>
-                  <span className="thumb t2" />
-                  Beanie
-                  <span className="sub">BN-BEA-008</span>
-                </td>
-                <td>6</td>
-                <td>0</td>
-                <td>8</td>
-                <td>
-                  <span className="pill orange">Low stock</span>
-                </td>
-                <td>
-                  <span className="qty">− 6 +</span>
-                </td>
-                <td>⋯</td>
-              </tr>
+              {brandRows.map((product) => (
+                <tr key={product.id}>
+                  <td>☐</td>
+                  <td>
+                    <span className={`thumb ${product.imageClass}`} />
+                    {product.name}
+                    <span className="sub">{product.sku}</span>
+                  </td>
+                  <td>{product.available}</td>
+                  <td>{product.committed}</td>
+                  <td>{Math.max(0, Math.round(product.available * 0.1))}</td>
+                  <td>
+                    <span className={`pill ${product.status === "Low stock" ? "orange" : "green"}`}>{product.status === "Low stock" ? "Low stock" : "In stock"}</span>
+                  </td>
+                  <td>
+                    <span className="qty">− {product.available} +</span>
+                  </td>
+                  <td>⋯</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
         <div className="pager">
-          <span>Showing 1–8 of 8 products</span>
+          <span>Showing 1–{brandRows.length} of {brandRows.length} products</span>
           <button className="btn pri">Save changes</button>
         </div>
       </section>

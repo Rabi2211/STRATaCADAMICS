@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
+import { STORE } from "../../data/store";
 import "./Settings.css";
 
 export default function MarketSettings() {
@@ -6,11 +8,11 @@ export default function MarketSettings() {
     <DashboardLayout
       kind="market"
       title={"Store settings"}
-      subtitle={"Manage your marketplace store details, policies and team access."}
+      subtitle={`Manage ${STORE.name} details, policies and access for the store owner account.`}
       actions={
         <>
           🔔
-          <button className="btn pri">View storefront ↗</button>
+          <Link to="/" className="btn pri">View storefront ↗</Link>
         </>
       }
     >
@@ -25,11 +27,11 @@ export default function MarketSettings() {
       <div className="grid g32">
         <section className="card ">
           <h3>General settings</h3>
-          <span className="sub">Update your marketplace store information. This will be visible to your customers.</span>
+          <span className="sub">Update the core store information for your storefront and owner dashboard.</span>
           <br />
           <div className="field">
             <label>Marketplace store name *</label>
-            <input defaultValue={"STRATA Market"} />
+            <input defaultValue={STORE.name} />
           </div>
           <div className="field">
             <label>Store URL *</label>
@@ -57,7 +59,7 @@ export default function MarketSettings() {
           </div>
           <div className="field">
             <label>Store description</label>
-            <textarea defaultValue={"A curated marketplace for independent brands creating high-quality, timeless products. Discover unique styles, new perspectives and support small businesses."} />
+            <textarea defaultValue={"A curated store for independent brands creating high-quality, timeless products. Discover unique styles, new perspectives and support small businesses."} />
           </div>
           <button className="btn pri">Save changes</button>
         </section>

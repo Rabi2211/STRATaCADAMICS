@@ -1,9 +1,11 @@
 import { lazy, Suspense } from "react";
-import { Link, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 
 const ROUTES = [
   { path: "/", label: "Storefront · Home", Component: lazy(() => import("./pages/storefront/Home")) },
   { path: "/men", label: "Storefront · Men’s Items", Component: lazy(() => import("./pages/storefront/MensItems")) },
+  { path: "/women", label: "Storefront · Women’s Items", Component: lazy(() => import("./pages/storefront/MensItems")) },
+  { path: "/kids", label: "Storefront · Kids’ Items", Component: lazy(() => import("./pages/storefront/MensItems")) },
   { path: "/studio/overview", label: "Studio · Overview", Component: lazy(() => import("./pages/studio/Overview")) },
   { path: "/studio/products", label: "Studio · Products", Component: lazy(() => import("./pages/studio/Products")) },
   { path: "/studio/orders", label: "Studio · Orders", Component: lazy(() => import("./pages/studio/Orders")) },
@@ -43,6 +45,10 @@ export default function App() {
         {ROUTES.map(({ path, Component }) => (
           <Route key={path} path={path} element={<Component />} />
         ))}
+        <Route path="/admin" element={<Navigate to="/market/overview" replace />} />
+        <Route path="/brand-owner" element={<Navigate to="/studio/overview" replace />} />
+        <Route path="/market" element={<Navigate to="/market/overview" replace />} />
+        <Route path="/studio" element={<Navigate to="/studio/overview" replace />} />
         <Route path="/pages" element={<PageIndex />} />
       </Routes>
     </Suspense>
