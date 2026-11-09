@@ -1,9 +1,33 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { STORE } from "../../data/store";
+import { fetchBrands, type ApiBrand } from "../../lib/store-api";
 import "./Settings.css";
 
 export default function StudioSettings() {
-  const brand = STORE.brands[0];
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const nextBrands = await fetchBrands();
+        if (!active) return;
+        setBrands(nextBrands);
+      } catch (error) {
+        if (active) {
+          console.error("Unable to load brand settings", error);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const brand = brands[0];
 
   return (
     <DashboardLayout
@@ -59,7 +83,7 @@ export default function StudioSettings() {
             </div>
             <div className="field">
               <label>Storefront description</label>
-              <textarea defaultValue={`Independent essentials for ${brand?.category?.toLowerCase() ?? "modern living"}. Curated pieces for a refined everyday wardrobe.`} />
+              <textarea defaultValue={`Independent essentials for ${brand?.description?.toLowerCase() ?? "modern living"}. Curated pieces for a refined everyday wardrobe.`} />
             </div>
           </section>
           <section className="card ">

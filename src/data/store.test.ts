@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { fetchBrands } from "../lib/store-api";
 import { addProductToStore, getBrandProducts, replaceStoreProducts, STORE } from "./store";
 
 describe("store owner data model", () => {
@@ -49,5 +50,19 @@ describe("store owner data model", () => {
 
     expect(STORE.products.length).toBe(snapshot.length + 1);
     expect(STORE.products[STORE.products.length - 1].sku).toBe("RT-JK-777");
+  });
+
+  it("returns an empty list when the brand API responds with no payload", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => null,
+      }),
+    );
+
+    await expect(fetchBrands()).resolves.toEqual([]);
+
+    vi.unstubAllGlobals();
   });
 });

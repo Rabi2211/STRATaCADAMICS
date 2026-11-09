@@ -21,6 +21,7 @@ const ROUTES = [
   { path: "/market/blog", label: "Market · Blog", Component: lazy(() => import("./pages/market/Blog")) },
   { path: "/market/analytics", label: "Market · Analytics", Component: lazy(() => import("./pages/market/Analytics")) },
   { path: "/market/settings", label: "Market · Store settings", Component: lazy(() => import("./pages/market/Settings")) },
+  { path: "/reset-password", label: "Account · Reset password", Component: lazy(() => import("./pages/ResetPassword")) },
 ];
 
 function PageIndex() {

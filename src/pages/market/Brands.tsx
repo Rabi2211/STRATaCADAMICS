@@ -1,10 +1,90 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
-import { STORE, getBrandProductCount } from "../../data/store";
+import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Brands.css";
 
+const emptyBrandForm = () => ({
+  name: "",
+  email: "",
+  description: "",
+});
+
 export default function MarketBrands() {
-  const activeBrandCount = STORE.brands.length;
-  const totalProducts = STORE.products.length;
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [selectedBrandId, setSelectedBrandId] = useState("");
+  const [showBrandForm, setShowBrandForm] = useState(false);
+  const [brandDraft, setBrandDraft] = useState(emptyBrandForm());
+  const [brandError, setBrandError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        if (!active) return;
+        setBrands(nextBrands);
+        setProducts(nextProducts.map((product) => mapApiProduct(product)));
+        setSelectedBrandId((current) => current || nextBrands[0]?.id || "");
+      } catch (error) {
+        if (active) {
+          console.error("Unable to load brands", error);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const activeBrandCount = brands.length;
+  const totalProducts = products.length;
+  const selectedBrand = brands.find((brand) => brand.id === selectedBrandId) ?? brands[0] ?? null;
+
+  const getBrandProductCount = (brandId: string) =>
+    products.filter((product) => product.brandId === brandId).length;
+
+  const handleBrandSubmit = (event: FormEvent) => {
+    event.preventDefault();
+
+    const name = brandDraft.name.trim();
+    if (!name) {
+      setBrandError("Brand name is required.");
+      return;
+    }
+
+    const initials = name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "BR";
+
+    const nextBrand: ApiBrand = {
+      id: `brand-${Date.now()}`,
+      name,
+      description: brandDraft.description || "New brand created from the owner account.",
+      accent: "#c4664a",
+      abbreviation: initials,
+      owner: {
+        id: `owner-${Date.now()}`,
+        email: brandDraft.email || "owner@strata.app",
+        name: "Store owner",
+        role: "Brand",
+      },
+      products: [],
+    };
+
+    setBrands((current) => [nextBrand, ...current]);
+    setSelectedBrandId(nextBrand.id);
+    setShowBrandForm(false);
+    setBrandDraft(emptyBrandForm());
+    setBrandError("");
+  };
 
   return (
     <DashboardLayout
@@ -15,13 +95,37 @@ export default function MarketBrands() {
         <>
           <input className="search" placeholder="Search brands by name or category…" />
           <span className="seg">
-            <span className="on">All ({STORE.brands.length})</span>
+            <span className="on">All ({brands.length})</span>
             <span>Active ({activeBrandCount})</span>
           </span>
-          <button className="btn pri">+ Add brand</button>
+          <button className="btn pri" type="button" onClick={() => setShowBrandForm(true)}>+ Add brand</button>
         </>
       }
     >
+      {showBrandForm && (
+        <form className="card" onSubmit={handleBrandSubmit} style={{ marginBottom: 18 }}>
+          <h3>Add brand</h3>
+          {brandError && <p className="auth-error">{brandError}</p>}
+          <div className="grid g2">
+            <label className="field">
+              <span>Brand name</span>
+              <input value={brandDraft.name} onChange={(event) => setBrandDraft((current) => ({ ...current, name: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Brand email</span>
+              <input type="email" value={brandDraft.email} onChange={(event) => setBrandDraft((current) => ({ ...current, email: event.target.value }))} />
+            </label>
+          </div>
+          <label className="field">
+            <span>Description</span>
+            <textarea value={brandDraft.description} onChange={(event) => setBrandDraft((current) => ({ ...current, description: event.target.value }))} />
+          </label>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn pri" type="submit">Save brand</button>
+            <button className="btn" type="button" onClick={() => { setShowBrandForm(false); setBrandError(""); }}>Cancel</button>
+          </div>
+        </form>
+      )}
       <div className="split">
         <div>
           <div className="grid g3">
@@ -29,7 +133,7 @@ export default function MarketBrands() {
               <div className="ic" />
               <div>
                 <span>Total brands</span>
-                <b>{STORE.brands.length}</b>
+                <b>{brands.length}</b>
                 {" "}
                 <span>across your store</span>
               </div>
@@ -66,14 +170,14 @@ export default function MarketBrands() {
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
-                  {STORE.brands.map((brand) => (
-                    <tr key={brand.id}>
+                  {brands.map((brand) => (
+                    <tr key={brand.id} onClick={() => setSelectedBrandId(brand.id)} style={{ cursor: "pointer" }}>
                       <td>
-                        <span className="av" style={{ background: brand.accent }}>{brand.abbreviation}</span>
+                        <span className="av" style={{ background: brand.accent ?? "#5b6b4c" }}>{brand.abbreviation ?? brand.name.slice(0, 2).toUpperCase()}</span>
                         {brand.name}
-                        <span className="sub">{brand.category}</span>
+                        <span className="sub">{brand.owner?.role ?? "Brand"}</span>
                       </td>
-                      <td>{brand.category}</td>
+                      <td>{brand.owner?.role ?? "Store"}</td>
                       <td>{getBrandProductCount(brand.id)}</td>
                       <td>R{(getBrandProductCount(brand.id) * 124).toLocaleString()}</td>
                       <td>
@@ -89,23 +193,23 @@ export default function MarketBrands() {
         </div>
         <aside className="panel">
           <h3>
-            <span className="av" style={{ background: "#2f4a35" }}>MM</span>
-            Moss & Maple
-            <span className="sub">Timeless essentials</span>
+            <span className="av" style={{ background: selectedBrand?.accent ?? "#2f4a35" }}>{selectedBrand?.abbreviation ?? "ST"}</span>
+            {selectedBrand?.name ?? "Store brand"}
+            <span className="sub">{selectedBrand?.description ?? "Brand catalog"}</span>
             {" "}
             <span>✕</span>
           </h3>
-          <button className="btn pri">✎ Edit brand</button>
+          <button className="btn pri" type="button" onClick={() => setShowBrandForm(true)}>✎ Edit brand</button>
           {" "}
-          <button className="btn ">View products ↗</button>
+          <Link to="/market/products" className="btn">View products ↗</Link>
           <h3 style={{ marginTop: "18px" }}>Brand contact</h3>
           <div className="row">
             <span className="sub">Contact name</span>
-            <span>Taylor Brooks</span>
+            <span>{selectedBrand?.owner?.name ?? "Store owner"}</span>
           </div>
           <div className="row">
             <span className="sub">Email</span>
-            <span>taylor@example.com</span>
+            <span>{selectedBrand?.owner?.email ?? "owner@store.com"}</span>
           </div>
           <div className="row">
             <span className="sub">Phone</span>
@@ -113,7 +217,7 @@ export default function MarketBrands() {
           </div>
           <div className="row">
             <span className="sub">Website</span>
-            <span>www.mossandmaple.com</span>
+            <span>www.stratamarket.com</span>
           </div>
           <h3 style={{ marginTop: "18px" }}>
             Brand status
@@ -131,7 +235,7 @@ export default function MarketBrands() {
               <div className="ic" />
               <div>
                 <span>Products</span>
-                <b>{getBrandProductCount("moss-maple")}</b>
+                <b>{selectedBrand ? getBrandProductCount(selectedBrand.id) : 0}</b>
                 <span className="up">▲ 12%</span>
                 {" "}
                 <span />
@@ -141,7 +245,7 @@ export default function MarketBrands() {
               <div className="ic" />
               <div>
                 <span>Sales</span>
-                <b>R12,480</b>
+                <b>R{((selectedBrand ? getBrandProductCount(selectedBrand.id) : 0) * 124).toLocaleString()}</b>
                 <span className="up">▲ 14%</span>
                 {" "}
                 <span />

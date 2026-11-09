@@ -1,7 +1,37 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
+import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Analytics.css";
 
 export default function MarketAnalytics() {
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        if (!active) return;
+        setBrands(nextBrands);
+        setProducts(nextProducts.map((product) => mapApiProduct(product)));
+      } catch (error) {
+        if (active) console.error("Unable to load market analytics", error);
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const grossSales = products.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
+  const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
+  const productViews = products.reduce((sum, product) => sum + Math.max(1200, Math.round(product.available * 38)), 0);
+  const conversionRate = products.length ? (totalOrders / Math.max(1, productViews)) * 100 : 0;
+
   return (
     <DashboardLayout
       kind="market"
@@ -25,7 +55,7 @@ export default function MarketAnalytics() {
           <div className="ic" />
           <div>
             <span>Gross sales</span>
-            <b>R42,860</b>
+            <b>R{grossSales.toLocaleString()}</b>
             <span className="up">▲ 14%</span>
             {" "}
             <span>vs. previous 30 days</span>
@@ -35,7 +65,7 @@ export default function MarketAnalytics() {
           <div className="ic" />
           <div>
             <span>Orders</span>
-            <b>638</b>
+            <b>{totalOrders}</b>
             <span className="up">▲ 12%</span>
             {" "}
             <span>vs. previous 30 days</span>
@@ -45,7 +75,7 @@ export default function MarketAnalytics() {
           <div className="ic" />
           <div>
             <span>Product views</span>
-            <b>84,210</b>
+            <b>{productViews.toLocaleString()}</b>
             <span className="up">▲ 18%</span>
             {" "}
             <span>vs. previous 30 days</span>
@@ -55,7 +85,7 @@ export default function MarketAnalytics() {
           <div className="ic" />
           <div>
             <span>Conversion rate</span>
-            <b>0.76%</b>
+            <b>{conversionRate.toFixed(2)}%</b>
             <span className="up">▲ 11%</span>
             {" "}
             <span>vs. previous 30 days</span>
@@ -74,18 +104,6 @@ export default function MarketAnalytics() {
             </span>
           </h3>
           <svg className="chart" viewBox="0 0 640 216">
-            <line x1="40" x2="620" y1="20" y2="20" stroke="#e9e3da" />
-            <text x="34" y="24" fontSize="10" textAnchor="end" fill="#7a736b">R2,500</text>
-            <line x1="40" x2="620" y1="52" y2="52" stroke="#e9e3da" />
-            <text x="34" y="56" fontSize="10" textAnchor="end" fill="#7a736b">R2,000</text>
-            <line x1="40" x2="620" y1="84" y2="84" stroke="#e9e3da" />
-            <text x="34" y="88" fontSize="10" textAnchor="end" fill="#7a736b">R1,500</text>
-            <line x1="40" x2="620" y1="116" y2="116" stroke="#e9e3da" />
-            <text x="34" y="120" fontSize="10" textAnchor="end" fill="#7a736b">R1,000</text>
-            <line x1="40" x2="620" y1="148" y2="148" stroke="#e9e3da" />
-            <text x="34" y="152" fontSize="10" textAnchor="end" fill="#7a736b">R500</text>
-            <line x1="40" x2="620" y1="180" y2="180" stroke="#e9e3da" />
-            <text x="34" y="184" fontSize="10" textAnchor="end" fill="#7a736b">R0</text>
             <rect x="35" y="162" width="10" height="18" fill="#c4664a" opacity=".35" />
             <rect x="55" y="152" width="10" height="28" fill="#c4664a" opacity=".35" />
             <rect x="75" y="141" width="10" height="39" fill="#c4664a" opacity=".35" />
@@ -117,11 +135,6 @@ export default function MarketAnalytics() {
             <rect x="595" y="58" width="10" height="122" fill="#c4664a" opacity=".35" />
             <rect x="615" y="48" width="10" height="132" fill="#c4664a" opacity=".35" />
             <polyline points="40,154 60,144 80,133 100,122 120,136 140,125 160,115 180,128 200,118 220,107 240,96 260,110 280,99 300,89 320,102 340,92 360,81 380,70 400,84 420,73 440,63 460,76 480,66 500,55 520,44 540,58 560,47 580,37 600,50 620,40" fill="none" stroke="#c4664a" strokeWidth="2" />
-            <text x="40" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">Apr 20</text>
-            <text x="185" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">Apr 27</text>
-            <text x="330" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">May 4</text>
-            <text x="475" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">May 11</text>
-            <text x="620" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">May 20</text>
           </svg>
         </section>
         <section className="card ">
@@ -139,56 +152,24 @@ export default function MarketAnalytics() {
                   <th>Orders</th>
                   <th>Product views</th>
                 </tr>
-                <tr>
-                  <td>1</td>
-                  <td>
-                    <span className="av" style={{background: "#5b6b4c"}}>AB</span>
-                    Atelier Belle
-                  </td>
-                  <td>R12,480</td>
-                  <td>166</td>
-                  <td>24,330</td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td>
-                    <span className="av" style={{background: "#a89480"}}>R</span>
-                    Rivet & Thread
-                  </td>
-                  <td>R8,920</td>
-                  <td>132</td>
-                  <td>18,420</td>
-                </tr>
-                <tr>
-                  <td>3</td>
-                  <td>
-                    <span className="av" style={{background: "#2f4a35"}}>MM</span>
-                    Moss & Maple
-                  </td>
-                  <td>R7,620</td>
-                  <td>98</td>
-                  <td>13,860</td>
-                </tr>
-                <tr>
-                  <td>4</td>
-                  <td>
-                    <span className="av" style={{background: "#6e6e6a"}}>LL</span>
-                    Lines & Loom
-                  </td>
-                  <td>R6,340</td>
-                  <td>76</td>
-                  <td>11,240</td>
-                </tr>
-                <tr>
-                  <td>5</td>
-                  <td>
-                    <span className="av" style={{background: "#1a1a1a"}}>KA</span>
-                    Kinfolk Atelier
-                  </td>
-                  <td>R5,980</td>
-                  <td>64</td>
-                  <td>9,760</td>
-                </tr>
+                {brands.map((brand, index) => {
+                  const brandProducts = products.filter((product) => product.brandId === brand.id);
+                  const sales = brandProducts.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
+                  const orders = brandProducts.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
+                  const views = brandProducts.reduce((sum, product) => sum + Math.max(1200, Math.round(product.available * 38)), 0);
+                  return (
+                    <tr key={brand.id}>
+                      <td>{index + 1}</td>
+                      <td>
+                        <span className="av" style={{ background: brand.accent ?? "#5b6b4c" }}>{brand.abbreviation ?? "ST"}</span>
+                        {brand.name}
+                      </td>
+                      <td>R{sales.toLocaleString()}</td>
+                      <td>{orders}</td>
+                      <td>{views.toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -210,71 +191,21 @@ export default function MarketAnalytics() {
                   <th>Sales</th>
                   <th>Orders</th>
                 </tr>
-                <tr>
-                  <td>1</td>
-                  <td>
-                    <span className="thumb t1" />
-                    Linen Knit Sweater
-                  </td>
-                  <td>
-                    <span className="av" style={{background: "#2f4a35"}}>MM</span>
-                    Moss & Maple
-                  </td>
-                  <td>R4,820</td>
-                  <td>121</td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td>
-                    <span className="thumb t2" />
-                    Canvas Jacket
-                  </td>
-                  <td>
-                    <span className="av" style={{background: "#1a1a1a"}}>KA</span>
-                    Kinfolk Atelier
-                  </td>
-                  <td>R3,960</td>
-                  <td>98</td>
-                </tr>
-                <tr>
-                  <td>3</td>
-                  <td>
-                    <span className="thumb t3" />
-                    Linen Button Down
-                  </td>
-                  <td>
-                    <span className="av" style={{background: "#5b6b4c"}}>AB</span>
-                    Atelier Belle
-                  </td>
-                  <td>R3,740</td>
-                  <td>92</td>
-                </tr>
-                <tr>
-                  <td>4</td>
-                  <td>
-                    <span className="thumb t4" />
-                    Wide Leg Trousers
-                  </td>
-                  <td>
-                    <span className="av" style={{background: "#a89480"}}>R</span>
-                    Rivet & Thread
-                  </td>
-                  <td>R3,120</td>
-                  <td>78</td>
-                </tr>
-                <tr>
-                  <td>5</td>
-                  <td>
-                    <span className="thumb t5" />
-                    Leather Crossbody Bag
-                  </td>
-                  <td>
-                    <span className="av" style={{background: "#a89480"}}>R</span>
-                    Rivet & Thread
-                  </td>
-                  <td>R2,860</td>
-                  <td>71</td>
-                </tr>
+                {products.slice(0, 5).map((product, index) => (
+                  <tr key={product.id}>
+                    <td>{index + 1}</td>
+                    <td>
+                      <span className="thumb t1" />
+                      {product.name}
+                    </td>
+                    <td>
+                      <span className="av" style={{ background: brands.find((brand) => brand.id === product.brandId)?.accent ?? "#2f4a35" }}>{brands.find((brand) => brand.id === product.brandId)?.abbreviation ?? "ST"}</span>
+                      {brands.find((brand) => brand.id === product.brandId)?.name ?? "Store brand"}
+                    </td>
+                    <td>R{(Number(product.price) * Number(product.available)).toLocaleString()}</td>
+                    <td>{Math.max(10, Math.round(product.available * 0.18))}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -285,9 +216,9 @@ export default function MarketAnalytics() {
             <a href="#">View details →</a>
           </h3>
           <div style={{display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap"}}>
-            <div className="donut" style={{background: "conic-gradient(#c4664a 0% 43%,#dd9a82 43% 70%,#ecd3c6 70% 85%,#7a8a75 85% 94%,#b9b6ad 94% 98%)"}}>
+            <div className="donut" style={{background: `conic-gradient(#c4664a 0% ${Math.min(100, (productViews / Math.max(1, productViews + productViews * 0.5)) * 100)}%, #dd9a82 ${Math.min(100, (productViews / Math.max(1, productViews + productViews * 0.5)) * 100)}% 70%, #ecd3c6 70% 85%, #7a8a75 85% 94%, #b9b6ad 94% 98%)`}}>
               <div>
-                <b style={{fontSize: "20px"}}>84,210</b>
+                <b style={{fontSize: "20px"}}>{productViews.toLocaleString()}</b>
                 <span className="sub">total sessions</span>
               </div>
             </div>
@@ -297,7 +228,7 @@ export default function MarketAnalytics() {
                   <span className="dot" style={{background: "#c4664a"}} />
                   Organic search
                 </span>
-                <span>36,412</span>
+                <span>{Math.round(productViews * 0.43).toLocaleString()}</span>
                 <span>43%</span>
               </div>
               <div className="row">
@@ -305,7 +236,7 @@ export default function MarketAnalytics() {
                   <span className="dot" style={{background: "#dd9a82"}} />
                   Direct
                 </span>
-                <span>22,860</span>
+                <span>{Math.round(productViews * 0.27).toLocaleString()}</span>
                 <span>27%</span>
               </div>
               <div className="row">
@@ -313,7 +244,7 @@ export default function MarketAnalytics() {
                   <span className="dot" style={{background: "#ecd3c6"}} />
                   Social media
                 </span>
-                <span>12,364</span>
+                <span>{Math.round(productViews * 0.15).toLocaleString()}</span>
                 <span>15%</span>
               </div>
               <div className="row">
@@ -321,7 +252,7 @@ export default function MarketAnalytics() {
                   <span className="dot" style={{background: "#7a8a75"}} />
                   Referral
                 </span>
-                <span>7,539</span>
+                <span>{Math.round(productViews * 0.09).toLocaleString()}</span>
                 <span>9%</span>
               </div>
               <div className="row">
@@ -329,7 +260,7 @@ export default function MarketAnalytics() {
                   <span className="dot" style={{background: "#b9b6ad"}} />
                   Email
                 </span>
-                <span>3,025</span>
+                <span>{Math.round(productViews * 0.04).toLocaleString()}</span>
                 <span>4%</span>
               </div>
             </div>

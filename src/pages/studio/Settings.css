@@ -45,3 +45,16 @@
   color:var(--acc);
   border-bottom:2px solid var(--acc);
 }
+
+@media (max-width: 560px) {
+  .dash .tabs {
+    gap:12px;
+    overflow-x:auto;
+    white-space:nowrap;
+    padding-bottom:4px;
+  }
+
+  .dash .tabs a {
+    padding:8px 0;
+  }
+}

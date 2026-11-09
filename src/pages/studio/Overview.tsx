@@ -1,11 +1,39 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { STORE, STORE_SUMMARY } from "../../data/store";
+import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Overview.css";
 
 export default function StudioOverview() {
-  const brand = STORE.brands[0];
-  const totalOrders = STORE.products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        if (!active) return;
+        setBrands(nextBrands);
+        setProducts(nextProducts.map((product) => mapApiProduct(product)));
+      } catch (error) {
+        if (active) {
+          console.error("Unable to load studio overview", error);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const brand = brands[0];
+  const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
+  const totalRevenue = products.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
+  const productViews = products.length * 1640;
 
   return (
     <DashboardLayout
@@ -25,7 +53,7 @@ export default function StudioOverview() {
           <div className="ic" />
           <div>
             <span>Gross sales</span>
-            <b>R{STORE_SUMMARY.totalRevenue.toLocaleString()}</b>
+            <b>R{totalRevenue.toLocaleString()}</b>
             <span className="up">▲ +12.8%</span>
             {" "}
             <span>vs. previous 7 days</span>
@@ -45,7 +73,7 @@ export default function StudioOverview() {
           <div className="ic" />
           <div>
             <span>Product views</span>
-            <b>{STORE_SUMMARY.totalProducts * 1640}</b>
+            <b>{productViews.toLocaleString()}</b>
             <span className="up">▲ +8.2%</span>
             {" "}
             <span>vs. previous 7 days</span>

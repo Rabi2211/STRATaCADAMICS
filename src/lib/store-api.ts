@@ -1,3 +1,4 @@
+import { resolveApiBaseUrl } from "./api-config";
 import { getStoredAuthSession } from "./storage";
 
 export type ApiBrand = {
@@ -32,7 +33,7 @@ export type ApiProduct = {
 
 export type StoreStatus = "Active" | "Draft" | "Low stock" | "Preorder";
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+export const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 function getAuthHeaders(): Record<string, string> {
   const session = getStoredAuthSession();
@@ -68,6 +69,10 @@ async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(payload?.error ?? "Request failed.");
   }
 
+  if (payload === null || payload === undefined) {
+    return {} as T;
+  }
+
   return payload as T;
 }
 
@@ -101,13 +106,13 @@ export function mapApiProduct(product: ApiProduct) {
 }
 
 export async function fetchBrands(): Promise<ApiBrand[]> {
-  const payload = await apiRequest<{ brands: ApiBrand[] }>("/api/brands");
-  return payload.brands ?? [];
+  const payload = await apiRequest<{ brands?: ApiBrand[] }>("/api/brands");
+  return Array.isArray(payload.brands) ? payload.brands : [];
 }
 
 export async function fetchProducts(): Promise<ApiProduct[]> {
-  const payload = await apiRequest<{ products: ApiProduct[] }>("/api/products");
-  return payload.products ?? [];
+  const payload = await apiRequest<{ products?: ApiProduct[] }>("/api/products");
+  return Array.isArray(payload.products) ? payload.products : [];
 }
 
 export async function createProduct(input: {
@@ -121,10 +126,14 @@ export async function createProduct(input: {
   description?: string;
   imageClass?: string;
 }): Promise<ApiProduct> {
-  const payload = await apiRequest<{ product: ApiProduct }>("/api/products", {
+  const payload = await apiRequest<{ product?: ApiProduct }>("/api/products", {
     method: "POST",
     body: JSON.stringify(input),
   });
+
+  if (!payload.product) {
+    throw new Error("Product was not created.");
+  }
 
   return payload.product;
 }

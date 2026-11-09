@@ -1,11 +1,38 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { STORE, STORE_SUMMARY, getInventoryRows } from "../../data/store";
+import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Inventory.css";
 
 export default function StudioInventory() {
-  const rows = getInventoryRows();
-  const brand = STORE.brands[0];
-  const brandRows = rows.filter((product) => product.brandId === brand?.id);
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        if (!active) return;
+        setBrands(nextBrands);
+        setProducts(nextProducts.map((product) => mapApiProduct(product)));
+      } catch (error) {
+        if (active) {
+          console.error("Unable to load studio inventory", error);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const brand = brands[0];
+  const brandRows = products.filter((product) => product.brandId === brand?.id);
+  const totalUnits = products.reduce((sum, product) => sum + product.available, 0);
+  const lowStockCount = products.filter((product) => product.available <= 25).length;
 
   return (
     <DashboardLayout
@@ -34,7 +61,7 @@ export default function StudioInventory() {
           <div className="ic" />
           <div>
             <span>Total units</span>
-            <b>{STORE_SUMMARY.totalUnits}</b>
+            <b>{totalUnits}</b>
             {" "}
             <span>Across all products</span>
           </div>
@@ -43,7 +70,7 @@ export default function StudioInventory() {
           <div className="ic" />
           <div>
             <span>Low stock</span>
-            <b>{STORE_SUMMARY.lowStockProducts}</b>
+            <b>{lowStockCount}</b>
             {" "}
             <span>≤ 25 units remaining</span>
           </div>
@@ -52,7 +79,7 @@ export default function StudioInventory() {
           <div className="ic" />
           <div>
             <span>Out of stock</span>
-            <b>{rows.filter((product) => product.available === 0).length}</b>
+            <b>{products.filter((product) => product.available === 0).length}</b>
             {" "}
             <span>No units available</span>
           </div>
@@ -91,7 +118,7 @@ export default function StudioInventory() {
                     <span className="sub">{product.sku}</span>
                   </td>
                   <td>{product.available}</td>
-                  <td>{product.committed}</td>
+                  <td>{Math.max(2, Math.round(product.available * 0.08))}</td>
                   <td>{Math.max(0, Math.round(product.available * 0.1))}</td>
                   <td>
                     <span className={`pill ${product.status === "Low stock" ? "orange" : "green"}`}>{product.status === "Low stock" ? "Low stock" : "In stock"}</span>

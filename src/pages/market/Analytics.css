@@ -47,3 +47,33 @@
   height:auto;
   display:block;
 }
+
+@media (max-width: 900px) {
+  .dash .seg {
+    flex-wrap:wrap;
+  }
+
+  .dash .donut {
+    width:140px;
+    height:140px;
+    margin:0 auto;
+  }
+
+  .dash .donut div {
+    width:92px;
+    height:92px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dash .seg {
+    width:100%;
+    justify-content:space-between;
+  }
+
+  .dash .seg span {
+    flex:1 1 25%;
+    text-align:center;
+    padding:6px 4px;
+  }
+}

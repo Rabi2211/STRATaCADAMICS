@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { createProduct, fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Products.css";
@@ -22,6 +22,7 @@ export default function StudioProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -53,7 +54,14 @@ export default function StudioProducts() {
   }, []);
 
   const brand = brands.find((item) => item.id === selectedBrandId) ?? brands[0];
-  const brandProducts = products.filter((product) => product.brandId === selectedBrandId);
+  const brandProducts = products.filter((product) => product.brandId === (selectedBrandId || brand?.id || ""));
+
+  const focusProductForm = () => {
+    window.setTimeout(() => {
+      nameInputRef.current?.focus();
+      nameInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 10);
+  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -117,7 +125,7 @@ export default function StudioProducts() {
               <option key={item.id} value={item.id}>{item.name}</option>
             ))}
           </select>
-          <button className="btn pri" type="button">+ Add product</button>
+          <button className="btn pri" type="button" onClick={focusProductForm}>+ Add product</button>
         </>
       }
     >
@@ -127,7 +135,7 @@ export default function StudioProducts() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           <label>
             <span className="sub">Product name</span>
-            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+            <input ref={nameInputRef} value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
           </label>
           <label>
             <span className="sub">SKU</span>

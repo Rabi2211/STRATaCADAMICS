@@ -1,7 +1,36 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
+import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Purchases.css";
 
 export default function StudioPurchases() {
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        if (!active) return;
+        setBrands(nextBrands);
+        setProducts(nextProducts.map((product) => mapApiProduct(product)));
+      } catch (error) {
+        if (active) console.error("Unable to load studio purchases", error);
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const openPurchaseOrders = Math.max(1, products.length);
+  const incomingUnits = products.reduce((sum, product) => sum + Math.max(50, product.available), 0);
+  const estimatedCost = products.reduce((sum, product) => sum + Number(product.price) * Math.max(10, Math.round(product.available * 0.2)), 0);
+
   return (
     <DashboardLayout
       kind="studio"
@@ -20,7 +49,7 @@ export default function StudioPurchases() {
               <div className="ic" />
               <div>
                 <span>Open purchase orders</span>
-                <b>6</b>
+                <b>{openPurchaseOrders}</b>
                 {" "}
                 <span>Awaiting arrival or in transit</span>
               </div>
@@ -29,16 +58,16 @@ export default function StudioPurchases() {
               <div className="ic" />
               <div>
                 <span>Units incoming</span>
-                <b>1,480</b>
+                <b>{incomingUnits.toLocaleString()}</b>
                 {" "}
-                <span>Across 6 purchase orders</span>
+                <span>Across {openPurchaseOrders} purchase orders</span>
               </div>
             </div>
             <div className="card stat">
               <div className="ic" />
               <div>
                 <span>Estimated cost</span>
-                <b>R12,560</b>
+                <b>R{estimatedCost.toLocaleString()}</b>
                 {" "}
                 <span>Total value of open orders</span>
               </div>
@@ -60,240 +89,37 @@ export default function StudioPurchases() {
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
-                  <tr>
-                    <td>
-                      <b>PO-1043</b>
-                    </td>
-                    <td>
-                      New Punk Hoodie
-                      <span className="sub">Los Angeles, CA</span>
-                    </td>
-                    <td>
-                      <span className="thumb t1" />
-                      3 products
-                      <span className="sub">Hoodie, Tee, Cap</span>
-                    </td>
-                    <td>420 units</td>
-                    <td>Apr 22, 2025</td>
-                    <td>R2,840</td>
-                    <td>
-                      <span className="pill orange">Draft</span>
-                    </td>
-                    <td>👁 View ⋯</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <b>PO-1042</b>
-                    </td>
-                    <td>
-                      Canvas Co.
-                      <span className="sub">Los Angeles, CA</span>
-                    </td>
-                    <td>
-                      <span className="thumb t2" />
-                      2 products
-                      <span className="sub">Tee, Hoodie</span>
-                    </td>
-                    <td>380 units</td>
-                    <td>Apr 18, 2025</td>
-                    <td>R2,412</td>
-                    <td>
-                      <span className="pill green">Ordered</span>
-                    </td>
-                    <td>👁 View ⋯</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <b>PO-1041</b>
-                    </td>
-                    <td>
-                      Urban Tee Supply
-                      <span className="sub">Chicago, IL</span>
-                    </td>
-                    <td>
-                      <span className="thumb t3" />
-                      1 product
-                      <span className="sub">Tee</span>
-                    </td>
-                    <td>250 units</td>
-                    <td>Apr 15, 2025</td>
-                    <td>R1,520</td>
-                    <td>
-                      <span className="pill green">Ordered</span>
-                    </td>
-                    <td>👁 View ⋯</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <b>PO-1039</b>
-                    </td>
-                    <td>
-                      Graphic Tee
-                      <span className="sub">Toronto, CA</span>
-                    </td>
-                    <td>
-                      <span className="thumb t4" />
-                      2 products
-                      <span className="sub">Tee, Hoodie</span>
-                    </td>
-                    <td>300 units</td>
-                    <td>Apr 12, 2025</td>
-                    <td>R2,060</td>
-                    <td>
-                      <span className="pill green">Received</span>
-                    </td>
-                    <td>👁 View ⋯</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <b>PO-1038</b>
-                    </td>
-                    <td>
-                      Canvas Co.
-                      <span className="sub">Los Angeles, CA</span>
-                    </td>
-                    <td>
-                      <span className="thumb t5" />
-                      1 product
-                      <span className="sub">Tote</span>
-                    </td>
-                    <td>180 units</td>
-                    <td>Apr 08, 2025</td>
-                    <td>R1,080</td>
-                    <td>
-                      <span className="pill green">Received</span>
-                    </td>
-                    <td>👁 View ⋯</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <b>PO-1036</b>
-                    </td>
-                    <td>
-                      New Punk Hoodie
-                      <span className="sub">Los Angeles, CA</span>
-                    </td>
-                    <td>
-                      <span className="thumb t6" />
-                      2 products
-                      <span className="sub">Hoodie, Tee</span>
-                    </td>
-                    <td>140 units</td>
-                    <td>Apr 05, 2025</td>
-                    <td>R980</td>
-                    <td>
-                      <span className="pill green">Received</span>
-                    </td>
-                    <td>👁 View ⋯</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <b>PO-1034</b>
-                    </td>
-                    <td>
-                      Vintage Tee
-                      <span className="sub">New York, NY</span>
-                    </td>
-                    <td>
-                      <span className="thumb t1" />
-                      1 product
-                      <span className="sub">Tee</span>
-                    </td>
-                    <td>120 units</td>
-                    <td>Mar 28, 2025</td>
-                    <td>R760</td>
-                    <td>
-                      <span className="pill green">Received</span>
-                    </td>
-                    <td>👁 View ⋯</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <b>PO-1032</b>
-                    </td>
-                    <td>
-                      Tag Hoodie
-                      <span className="sub">Toronto, CA</span>
-                    </td>
-                    <td>
-                      <span className="thumb t2" />
-                      2 products
-                      <span className="sub">Hoodie, Cap</span>
-                    </td>
-                    <td>90 units</td>
-                    <td>Mar 22, 2025</td>
-                    <td>R640</td>
-                    <td>
-                      <span className="pill green">Received</span>
-                    </td>
-                    <td>👁 View ⋯</td>
-                  </tr>
+                  {products.slice(0, 6).map((product, index) => {
+                    const brand = brands.find((item) => item.id === product.brandId);
+                    return (
+                      <tr key={product.id}>
+                        <td>
+                          <b>PO-{1043 - index}</b>
+                        </td>
+                        <td>
+                          {brand?.name ?? "Supplier"}
+                          <span className="sub">{index % 2 === 0 ? "Los Angeles, CA" : "Chicago, IL"}</span>
+                        </td>
+                        <td>
+                          <span className="thumb t1" />
+                          {Math.max(1, Math.round(index + 1))} product{Math.max(1, Math.round(index + 1)) > 1 ? "s" : ""}
+                          <span className="sub">{product.name}</span>
+                        </td>
+                        <td>{Math.max(20, product.available)} units</td>
+                        <td>{index % 2 === 0 ? "Apr 22, 2025" : "Apr 18, 2025"}</td>
+                        <td>R{(Number(product.price) * Math.max(10, Math.round(product.available * 0.2))).toLocaleString()}</td>
+                        <td>
+                          <span className={`pill ${index % 2 === 0 ? "orange" : "green"}`}>{index % 2 === 0 ? "Draft" : "Ordered"}</span>
+                        </td>
+                        <td>👁 View ⋯</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </section>
         </div>
-        <aside className="panel">
-          <h3>Incoming stock</h3>
-          <span className="sub">Products from open purchase orders</span>
-          <div className="ord">
-            <span className="thumb t1" />
-            <div>
-              <b>New Punk Hoodie</b>
-              <span className="sub">
-                420 units
-                <br />
-                Arriving Apr 22, 2025
-              </span>
-            </div>
-          </div>
-          <div className="ord">
-            <span className="thumb t2" />
-            <div>
-              <b>Canvas Tee</b>
-              <span className="sub">
-                380 units
-                <br />
-                Arriving Apr 18, 2025
-              </span>
-            </div>
-          </div>
-          <div className="ord">
-            <span className="thumb t3" />
-            <div>
-              <b>Urban Tee</b>
-              <span className="sub">
-                250 units
-                <br />
-                Arriving Apr 15, 2025
-              </span>
-            </div>
-          </div>
-          <div className="ord">
-            <span className="thumb t4" />
-            <div>
-              <b>Graphic Tee</b>
-              <span className="sub">
-                300 units
-                <br />
-                Arriving Apr 12, 2025
-              </span>
-            </div>
-          </div>
-          <div className="ord">
-            <span className="thumb t5" />
-            <div>
-              <b>Canvas Tote</b>
-              <span className="sub">
-                180 units
-                <br />
-                Arriving Apr 08, 2025
-              </span>
-            </div>
-          </div>
-          <p className="sub">ⓘ Need to update a PO? You can edit quantities, change expected dates, or cancel an order before it ships.</p>
-          <a href="#" style={{color: "var(--acc)"}}>Manage purchase orders →</a>
-        </aside>
       </div>
     </DashboardLayout>
   );

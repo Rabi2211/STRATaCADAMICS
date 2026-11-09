@@ -1,0 +1,47 @@
+type User @table {
+  email: String!
+  name: String!
+  passwordHash: String!
+  role: String! @default(value: "CUSTOMER")
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type Brand @table {
+  name: String!
+  description: String
+  owner: User!
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type Product @table {
+  brand: Brand!
+  name: String!
+  sku: String!
+  category: String!
+  price: Float!
+  available: Int! @default(value: 0)
+  status: String! @default(value: "DRAFT")
+  description: String
+  imageClass: String
+  preOrderEnabled: Boolean! @default(value: false)
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type Order @table {
+  user: User!
+  status: String! @default(value: "PENDING")
+  total: Float!
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type OrderItem @table {
+  order: Order!
+  product: Product!
+  quantity: Int!
+  price: Float!
+  isPreOrder: Boolean! @default(value: false)
+}
