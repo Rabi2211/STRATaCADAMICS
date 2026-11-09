@@ -1,6 +1,14 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { createProduct, fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
+import {
+  createProduct,
+  deleteProduct,
+  fetchBrands,
+  fetchProducts,
+  mapApiProduct,
+  updateProduct,
+  type ApiBrand,
+} from "../../lib/store-api";
 import "./Products.css";
 
 type ProductRow = ReturnType<typeof mapApiProduct>;
@@ -12,17 +20,18 @@ const emptyForm = () => ({
   quantity: "",
   category: "",
   description: "",
+  status: "ACTIVE" as "ACTIVE" | "DRAFT" | "LOW_STOCK" | "PREORDER",
 });
 
 export default function StudioProducts() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [selectedBrandId, setSelectedBrandId] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -54,13 +63,11 @@ export default function StudioProducts() {
   }, []);
 
   const brand = brands.find((item) => item.id === selectedBrandId) ?? brands[0];
-  const brandProducts = products.filter((product) => product.brandId === (selectedBrandId || brand?.id || ""));
+  const brandProducts = products.filter((product) => product.brandId === selectedBrandId);
 
-  const focusProductForm = () => {
-    window.setTimeout(() => {
-      nameInputRef.current?.focus();
-      nameInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 10);
+  const resetForm = () => {
+    setEditingId(null);
+    setForm(emptyForm());
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -80,24 +87,57 @@ export default function StudioProducts() {
       setSubmitting(true);
       setError(null);
 
-      const created = await createProduct({
+      const payload = {
         brandId: brand.id,
         name,
         sku,
         price,
         available: quantity,
-        status: "ACTIVE",
+        status: form.status,
         category,
         description: form.description.trim() || "Brand-owned product added to the store.",
         imageClass: `t${(brandProducts.length % 5) + 1}`,
-      });
+      };
 
-      setProducts((current) => [mapApiProduct(created), ...current]);
-      setForm(emptyForm());
+      if (editingId) {
+        const updated = await updateProduct(editingId, payload);
+        setProducts((current) => current.map((item) => (item.id === editingId ? mapApiProduct(updated) : item)));
+      } else {
+        const created = await createProduct(payload);
+        setProducts((current) => [mapApiProduct(created), ...current]);
+      }
+
+      resetForm();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to save product.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEditProduct = (product: ProductRow) => {
+    setEditingId(product.id);
+    setForm({
+      name: product.name,
+      sku: product.sku,
+      price: String(product.price),
+      quantity: String(product.available),
+      category: product.category,
+      description: product.description,
+      status: product.status === "Active" ? "ACTIVE" : product.status === "Draft" ? "DRAFT" : product.status === "Low stock" ? "LOW_STOCK" : "PREORDER",
+    });
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      setError(null);
+      await deleteProduct(productId);
+      setProducts((current) => current.filter((item) => item.id !== productId));
+      if (editingId === productId) {
+        resetForm();
+      }
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete product.");
     }
   };
 
@@ -125,17 +165,17 @@ export default function StudioProducts() {
               <option key={item.id} value={item.id}>{item.name}</option>
             ))}
           </select>
-          <button className="btn pri" type="button" onClick={focusProductForm}>+ Add product</button>
+          <button className="btn pri" type="button" onClick={resetForm}>+ {editingId ? "New product" : "Add product"}</button>
         </>
       }
     >
       {error && <p className="auth-error">{error}</p>}
       <form onSubmit={handleSubmit} className="card" style={{ marginBottom: 20 }}>
-        <h3>Add product for {brand?.name}</h3>
+        <h3>{editingId ? "Edit product for" : "Add product for"} {brand?.name}</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           <label>
             <span className="sub">Product name</span>
-            <input ref={nameInputRef} value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
           </label>
           <label>
             <span className="sub">SKU</span>
@@ -153,13 +193,25 @@ export default function StudioProducts() {
             <span className="sub">Category</span>
             <input value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} />
           </label>
+          <label>
+            <span className="sub">Status</span>
+            <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as typeof form.status }))}>
+              <option value="ACTIVE">Active</option>
+              <option value="DRAFT">Draft</option>
+              <option value="LOW_STOCK">Low stock</option>
+              <option value="PREORDER">Preorder</option>
+            </select>
+          </label>
         </div>
         <label style={{ display: "block", marginTop: 12 }}>
           <span className="sub">Description</span>
           <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
         </label>
-        <div style={{ marginTop: 16 }}>
-          <button className="btn pri" type="submit" disabled={submitting}>{submitting ? "Saving…" : "Save product"}</button>
+        <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+          <button className="btn pri" type="submit" disabled={submitting}>{submitting ? "Saving…" : editingId ? "Update product" : "Save product"}</button>
+          {editingId && (
+            <button className="btn" type="button" onClick={resetForm}>Cancel</button>
+          )}
         </div>
       </form>
       <div className="tools">
@@ -198,7 +250,11 @@ export default function StudioProducts() {
                   <td>
                     <span className={`pill ${product.status === "Active" ? "green" : product.status === "Draft" ? "orange" : "blue"}`}>{product.status}</span>
                   </td>
-                  <td>✎ Edit &nbsp; ⋯</td>
+                  <td>
+                    <button className="btn" type="button" onClick={() => handleEditProduct(product)}>✎ Edit</button>
+                    &nbsp;
+                    <button className="btn" type="button" onClick={() => handleDeleteProduct(product.id)}>Delete</button>
+                  </td>
                 </tr>
               ))}
             </tbody>

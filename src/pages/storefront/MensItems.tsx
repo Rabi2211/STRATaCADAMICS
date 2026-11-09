@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import StoreLayout from "../../components/StoreLayout";
+import { addToCart } from "../../lib/cart";
 import "./MensItems.css";
 
 interface Product {
@@ -54,15 +55,30 @@ const CATEGORY_DATA: Record<string, { title: string; categories: string[]; produ
 };
 
 function ProductCard({ product }: { product: Product }) {
+  const priceNumber = Number(String(product.price).replace(/[^\d.]/g, ""));
+
+  const handleAddToCart = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: priceNumber,
+      brandId: "storefront",
+      imageClass: product.hoodie ? "hood" : "t1",
+    }, 1);
+  };
+
   return (
-    <a className="prod" href="#">
+    <div className="prod" aria-label={`${product.name} from the ${product.price} category`}>
       <div className={`img${product.hoodie ? " hood" : ""}`}>
         <span>♡</span>
       </div>
       <b>{product.price}</b>
       <p>{product.name}</p>
       <small>SIZES: {product.sizes}</small>
-    </a>
+      <button type="button" className="btn btn--small" onClick={handleAddToCart}>Add to cart</button>
+    </div>
   );
 }
 

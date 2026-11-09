@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ensureAuthSession, formatAuthError, getPostLoginPath, getRoleForAuth } from "../lib/auth";
+import { canAccessDashboardRoute, ensureAuthSession, formatAuthError, getPostLoginPath, getRequiredDashboardRole, getRoleForAuth } from "../lib/auth";
 import { getRegistrationDisplayName, isBrandNameRequired } from "./StoreHeader";
 
 describe("auth registration flow", () => {
@@ -31,5 +31,14 @@ describe("auth registration flow", () => {
   it("rejects empty auth payloads instead of returning a null session", () => {
     expect(() => ensureAuthSession(null)).toThrow("Authentication response was empty.");
     expect(() => ensureAuthSession({ token: "abc", user: null as any })).toThrow("Authentication response was empty.");
+  });
+
+  it("restricts dashboard access by role and route", () => {
+    expect(getRequiredDashboardRole("/studio/overview")).toBe("brand-owner");
+    expect(getRequiredDashboardRole("/market/overview")).toBe("admin");
+    expect(canAccessDashboardRoute("/studio/overview", "brand-owner")).toBe(true);
+    expect(canAccessDashboardRoute("/studio/overview", "customer")).toBe(false);
+    expect(canAccessDashboardRoute("/market/overview", "admin")).toBe(true);
+    expect(canAccessDashboardRoute("/market/overview", "brand-owner")).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
-import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
+import { createBrand, fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Brands.css";
 
 const emptyBrandForm = () => ({
@@ -48,7 +48,7 @@ export default function MarketBrands() {
   const getBrandProductCount = (brandId: string) =>
     products.filter((product) => product.brandId === brandId).length;
 
-  const handleBrandSubmit = (event: FormEvent) => {
+  const handleBrandSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
     const name = brandDraft.name.trim();
@@ -57,33 +57,20 @@ export default function MarketBrands() {
       return;
     }
 
-    const initials = name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("") || "BR";
+    try {
+      const nextBrand = await createBrand({
+        name,
+        description: brandDraft.description || "New brand created from the owner account.",
+      });
 
-    const nextBrand: ApiBrand = {
-      id: `brand-${Date.now()}`,
-      name,
-      description: brandDraft.description || "New brand created from the owner account.",
-      accent: "#c4664a",
-      abbreviation: initials,
-      owner: {
-        id: `owner-${Date.now()}`,
-        email: brandDraft.email || "owner@strata.app",
-        name: "Store owner",
-        role: "Brand",
-      },
-      products: [],
-    };
-
-    setBrands((current) => [nextBrand, ...current]);
-    setSelectedBrandId(nextBrand.id);
-    setShowBrandForm(false);
-    setBrandDraft(emptyBrandForm());
-    setBrandError("");
+      setBrands((current) => [{ ...nextBrand, owner: nextBrand.owner ?? { id: "owner", email: brandDraft.email || "owner@strata.app", name: "Store owner", role: "Brand" } }, ...current]);
+      setSelectedBrandId(nextBrand.id);
+      setShowBrandForm(false);
+      setBrandDraft(emptyBrandForm());
+      setBrandError("");
+    } catch (error) {
+      setBrandError(error instanceof Error ? error.message : "Unable to create brand.");
+    }
   };
 
   return (

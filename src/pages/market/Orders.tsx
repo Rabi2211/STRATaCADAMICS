@@ -1,23 +1,29 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
+import { fetchOrders, updateOrderStatus, type ApiOrder } from "../../lib/store-api";
 import "./Orders.css";
 
 export default function MarketOrders() {
-  const [brands, setBrands] = useState<ApiBrand[]>([]);
-  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       try {
-        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        const nextOrders = await fetchOrders();
         if (!active) return;
-        setBrands(nextBrands);
-        setProducts(nextProducts.map((product) => mapApiProduct(product)));
-      } catch (error) {
-        if (active) console.error("Unable to load market orders", error);
+        setOrders(nextOrders);
+      } catch (loadError) {
+        if (active) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load market orders.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
@@ -27,20 +33,31 @@ export default function MarketOrders() {
     };
   }, []);
 
-  const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.12)), 0);
-  const awaitingShipment = Math.max(1, Math.round(totalOrders * 0.18));
-  const orderRows = products.slice(0, 6).map((product, index) => {
-    const brand = brands.find((item) => item.id === product.brandId);
-    return {
-      id: `#STR-${10432 - index}`,
-      customer: ["Taylor Brooks", "Jordan Lee", "Casey Nguyen", "Morgan Patel", "Riley Carter", "Avery Johnson"][index] ?? "Customer",
-      email: ["taylor.brooks@example.com", "jordan.lee@example.com", "casey.nguyen@example.com", "morgan.patel@example.com", "riley.carter@example.com", "avery.johnson@example.com"][index] ?? "customer@example.com",
-      brand,
-      total: product.price,
-      fulfilled: index % 2 === 0 ? "Shipped" : "Processing",
-      date: `May ${20 - index}, 2025`,
-    };
-  });
+  const handleStatusUpdate = async (orderId: string, nextStatus: string) => {
+    try {
+      const updated = await updateOrderStatus(orderId, nextStatus);
+      setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, status: updated.status } : order)));
+      setError(null);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Unable to update order status.");
+    }
+  };
+
+  const totalOrders = orders.length;
+  const pendingOrders = orders.filter((order) => order.status === "PENDING").length;
+  const shippedOrders = orders.filter((order) => order.status === "SHIPPED").length;
+  const awaitingShipment = Math.max(0, pendingOrders + orders.filter((order) => order.status === "PAID").length);
+
+  const orderRows = orders.map((order) => ({
+    id: order.id,
+    customer: order.user?.name ?? "Customer",
+    email: order.user?.email ?? "customer@example.com",
+    total: Number(order.total ?? 0),
+    items: order.items?.map((item) => `${item.quantity}× ${item.product?.name ?? "Product"}`).join(", ") || "Order",
+    status: order.status,
+    date: order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-ZA", { month: "short", day: "numeric", year: "numeric" }) : "No date",
+    brandName: order.items?.[0]?.product?.brand?.name ?? "Brand",
+  }));
 
   return (
     <DashboardLayout
@@ -49,8 +66,7 @@ export default function MarketOrders() {
       subtitle={"Manage orders from all marketplace brands in one place."}
       actions={
         <>
-          <button className="btn ">📅 Apr 20, 2025 – May 20, 2025 ▾</button>
-          🔔
+          <button className="btn ">{orders.length ? "Live marketplace orders" : "No orders"}</button>
           <button className="btn pri">View storefront ↗</button>
         </>
       }
@@ -62,74 +78,60 @@ export default function MarketOrders() {
           <br />
           <div className="tabs">
             <a href="#" className="on">All {totalOrders}</a>
-            <a href="#">Unfulfilled {awaitingShipment}</a>
-            <a href="#">Shipped {Math.max(1, totalOrders - awaitingShipment)}</a>
-            <a href="#">Cancelled 24</a>
+            <a href="#">Pending {pendingOrders}</a>
+            <a href="#">Shipped {shippedOrders}</a>
+            <a href="#">Awaiting shipment {awaitingShipment}</a>
           </div>
-          <div className="grid g2">
-            <div className="card stat">
-              <div className="ic" />
-              <div>
-                <span>Total orders</span>
-                <b>{totalOrders}</b>
-                <span className="up">▲ 12%</span>
-                {" "}
-                <span>vs. previous 30 days</span>
-              </div>
-            </div>
-            <div className="card stat">
-              <div className="ic" />
-              <div>
-                <span>Awaiting shipment</span>
-                <b>{awaitingShipment}</b>
-                <span className="up">▲ 18%</span>
-                {" "}
-                <span>vs. previous 30 days</span>
-              </div>
-            </div>
-          </div>
-          <section className="card ">
-            <h3 />
-            <div className="wrap">
-              <table>
-                <tbody>
-                  <tr>
-                    <th>Order #</th>
-                    <th>Customer</th>
-                    <th>Brand(s)</th>
-                    <th>Date</th>
-                    <th>Total</th>
-                    <th>Fulfillment</th>
-                    <th>Action</th>
-                  </tr>
-                  {orderRows.map((row, index) => (
-                    <tr key={row.id}>
-                      <td>{row.id}</td>
-                      <td>
-                        {row.customer}
-                        <span className="sub">{row.email}</span>
-                      </td>
-                      <td>
-                        <span className="av" style={{ background: row.brand?.accent ?? "#5b6b4c" }}>{row.brand?.abbreviation ?? "ST"}</span>
-                        {row.brand?.name ?? "Store brand"}
-                      </td>
-                      <td>
-                        {row.date}
-                        <span className="sub">{index % 2 === 0 ? "10:24 AM" : "09:17 AM"}</span>
-                      </td>
-                      <td>R{Number(row.total).toFixed(2)}</td>
-                      <td>
-                        <span className={`pill ${row.fulfilled === "Shipped" ? "green" : "orange"}`}>{row.fulfilled}</span>
-                      </td>
-                      <td>
-                        <button className="btn ">View</button>
-                      </td>
+          {error && <p className="auth-error" style={{ marginBottom: 12 }}>{error}</p>}
+          {loading ? (
+            <div className="card">Loading marketplace orders…</div>
+          ) : (
+            <section className="card ">
+              <h3 />
+              <div className="wrap">
+                <table>
+                  <tbody>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Customer</th>
+                      <th>Brand(s)</th>
+                      <th>Date</th>
+                      <th>Total</th>
+                      <th>Fulfillment</th>
+                      <th>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                    {orderRows.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.id.slice(0, 8).toUpperCase()}</td>
+                        <td>
+                          {row.customer}
+                          <span className="sub">{row.email}</span>
+                        </td>
+                        <td>{row.brandName}</td>
+                        <td>{row.date}</td>
+                        <td>R{Number(row.total).toFixed(2)}</td>
+                        <td>
+                          <span className={`pill ${row.status === "SHIPPED" ? "green" : row.status === "CANCELLED" ? "orange" : "blue"}`}>{row.status}</span>
+                        </td>
+                        <td>
+                          <select
+                            value={row.status}
+                            onChange={(event) => void handleStatusUpdate(row.id, event.target.value)}
+                            aria-label={`Update market order ${row.id} status`}
+                          >
+                            <option value="PENDING">Pending</option>
+                            <option value="PAID">Paid</option>
+                            <option value="SHIPPED">Shipped</option>
+                            <option value="CANCELLED">Cancelled</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </DashboardLayout>

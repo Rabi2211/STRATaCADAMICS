@@ -1,11 +1,30 @@
-import { lazy, Suspense } from "react";
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, type ReactNode } from "react";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { canAccessDashboardRoute, getCurrentSession, getPostLoginPath } from "./lib/auth";
+
+function ProtectedDashboardRoute({ path, children }: { path: string; children: ReactNode }) {
+  const location = useLocation();
+  const session = getCurrentSession();
+
+  if (!session?.token || !session.user) {
+    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+  }
+
+  if (!canAccessDashboardRoute(path, session.user.role)) {
+    return <Navigate to={getPostLoginPath(session.user.role)} replace state={{ from: location.pathname }} />;
+  }
+
+  return <>{children}</>;
+}
 
 const ROUTES = [
   { path: "/", label: "Storefront · Home", Component: lazy(() => import("./pages/storefront/Home")) },
   { path: "/men", label: "Storefront · Men’s Items", Component: lazy(() => import("./pages/storefront/MensItems")) },
   { path: "/women", label: "Storefront · Women’s Items", Component: lazy(() => import("./pages/storefront/MensItems")) },
   { path: "/kids", label: "Storefront · Kids’ Items", Component: lazy(() => import("./pages/storefront/MensItems")) },
+  { path: "/cart", label: "Storefront · Cart", Component: lazy(() => import("./pages/storefront/Cart")) },
+  { path: "/checkout", label: "Storefront · Checkout", Component: lazy(() => import("./pages/storefront/Checkout")) },
+  { path: "/account/orders", label: "Storefront · My orders", Component: lazy(() => import("./pages/storefront/MyOrders")) },
   { path: "/studio/overview", label: "Studio · Overview", Component: lazy(() => import("./pages/studio/Overview")) },
   { path: "/studio/products", label: "Studio · Products", Component: lazy(() => import("./pages/studio/Products")) },
   { path: "/studio/orders", label: "Studio · Orders", Component: lazy(() => import("./pages/studio/Orders")) },
@@ -43,9 +62,25 @@ export default function App() {
   return (
     <Suspense fallback={<p style={{ padding: 24 }}>Loading…</p>}>
       <Routes>
-        {ROUTES.map(({ path, Component }) => (
-          <Route key={path} path={path} element={<Component />} />
-        ))}
+        {ROUTES.map(({ path, Component }) => {
+          const isDashboardRoute = path.startsWith("/studio") || path.startsWith("/market");
+
+          return (
+            <Route
+              key={path}
+              path={path}
+              element={
+                isDashboardRoute ? (
+                  <ProtectedDashboardRoute path={path}>
+                    <Component />
+                  </ProtectedDashboardRoute>
+                ) : (
+                  <Component />
+                )
+              }
+            />
+          );
+        })}
         <Route path="/admin" element={<Navigate to="/market/overview" replace />} />
         <Route path="/brand-owner" element={<Navigate to="/studio/overview" replace />} />
         <Route path="/market" element={<Navigate to="/market/overview" replace />} />

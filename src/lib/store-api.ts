@@ -33,6 +33,31 @@ export type ApiProduct = {
 
 export type StoreStatus = "Active" | "Draft" | "Low stock" | "Preorder";
 
+export type ApiOrderItem = {
+  id: string;
+  orderId: string;
+  productId: string;
+  quantity: number;
+  price: number | string;
+  product?: ApiProduct | null;
+};
+
+export type ApiOrder = {
+  id: string;
+  userId: string;
+  status: string;
+  total: number | string;
+  createdAt?: string;
+  updatedAt?: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    role?: string;
+  };
+  items?: ApiOrderItem[];
+};
+
 export const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 function getAuthHeaders(): Record<string, string> {
@@ -109,7 +134,21 @@ export async function fetchBrands(): Promise<ApiBrand[]> {
   const payload = await apiRequest<{ brands?: ApiBrand[] }>("/api/brands");
   return Array.isArray(payload.brands) ? payload.brands : [];
 }
+export async function createBrand(input: {
+  name: string;
+  description?: string | null;
+}): Promise<ApiBrand> {
+  const payload = await apiRequest<{ brand?: ApiBrand }>('/api/brands', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 
+  if (!payload.brand) {
+    throw new Error('Brand was not created.');
+  }
+
+  return payload.brand;
+}
 export async function fetchProducts(): Promise<ApiProduct[]> {
   const payload = await apiRequest<{ products?: ApiProduct[] }>("/api/products");
   return Array.isArray(payload.products) ? payload.products : [];
@@ -136,4 +175,72 @@ export async function createProduct(input: {
   }
 
   return payload.product;
+}
+
+export async function updateProduct(id: string, input: {
+  brandId: string;
+  name: string;
+  sku: string;
+  category: string;
+  price: number;
+  available: number;
+  status: string;
+  description?: string;
+  imageClass?: string;
+}): Promise<ApiProduct> {
+  const payload = await apiRequest<{ product?: ApiProduct }>(`/api/products/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+
+  if (!payload.product) {
+    throw new Error("Product was not updated.");
+  }
+
+  return payload.product;
+}
+
+export async function deleteProduct(id: string): Promise<ApiProduct> {
+  const payload = await apiRequest<{ deleted?: ApiProduct }>(`/api/products/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!payload.deleted) {
+    throw new Error("Product was not deleted.");
+  }
+
+  return payload.deleted;
+}
+
+export async function createOrder(input: {
+  items: Array<{ productId: string; quantity: number }>;
+}): Promise<ApiOrder> {
+  const payload = await apiRequest<{ order?: ApiOrder }>('/api/orders', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+  if (!payload.order) {
+    throw new Error('Order was not created.');
+  }
+
+  return payload.order;
+}
+
+export async function fetchOrders(): Promise<ApiOrder[]> {
+  const payload = await apiRequest<{ orders?: ApiOrder[] }>("/api/orders");
+  return Array.isArray(payload.orders) ? payload.orders : [];
+}
+
+export async function updateOrderStatus(id: string, status: string): Promise<ApiOrder> {
+  const payload = await apiRequest<{ order?: ApiOrder }>(`/api/orders/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+
+  if (!payload.order) {
+    throw new Error("Order status was not updated.");
+  }
+
+  return payload.order;
 }

@@ -95,6 +95,40 @@ export function getPostLoginPath(role?: string): string {
   return "/";
 }
 
+export function getRequiredDashboardRole(pathname: string): "brand-owner" | "admin" | "customer" | null {
+  const normalized = pathname?.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.startsWith("/studio") || normalized.startsWith("/brand-owner")) {
+    return "brand-owner";
+  }
+
+  if (normalized.startsWith("/market") || normalized.startsWith("/admin")) {
+    return "admin";
+  }
+
+  return "customer";
+}
+
+export function canAccessDashboardRoute(pathname: string, role?: string): boolean {
+  const requiredRole = getRequiredDashboardRole(pathname);
+
+  if (!requiredRole) {
+    return true;
+  }
+
+  const currentRole = getRoleForAuth(role);
+
+  if (requiredRole === "customer") {
+    return currentRole === "customer";
+  }
+
+  return currentRole === requiredRole;
+}
+
 function normalizeRole(role: string): string {
   return role.toUpperCase().replace(/-/g, "_");
 }

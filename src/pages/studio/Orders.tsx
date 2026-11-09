@@ -1,23 +1,29 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
+import { fetchOrders, updateOrderStatus, type ApiOrder } from "../../lib/store-api";
 import "./Orders.css";
 
 export default function StudioOrders() {
-  const [brands, setBrands] = useState<ApiBrand[]>([]);
-  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       try {
-        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        const nextOrders = await fetchOrders();
         if (!active) return;
-        setBrands(nextBrands);
-        setProducts(nextProducts.map((product) => mapApiProduct(product)));
-      } catch (error) {
-        if (active) console.error("Unable to load studio orders", error);
+        setOrders(nextOrders);
+      } catch (loadError) {
+        if (active) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load studio orders.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
@@ -27,17 +33,27 @@ export default function StudioOrders() {
     };
   }, []);
 
-  const brand = brands[0];
-  const orderCount = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
-  const orderRows = products.slice(0, 6).map((product, index) => ({
-    id: `#${1043 - index}`,
-    customer: ["Jordan Mitchell", "Taylor Kim", "Riley Patel", "Jamie Chen", "Morgan Lee", "Casey Rivera"][index] ?? "Customer",
-    email: ["jordan.mitchell@example.com", "taylor.kim@example.com", "riley.patel@example.com", "jamie.chen@example.com", "morgan.lee@example.com", "casey.rivera@example.com"][index] ?? "customer@example.com",
-    total: product.price,
-    items: `${Math.max(1, Math.round(product.available / 20))} item${Math.max(1, Math.round(product.available / 20)) > 1 ? "s" : ""}`,
-    status: index % 2 === 0 ? "Unfulfilled" : "Shipped",
-    date: `Apr ${22 - index}, 2025`,
-    brandName: brand?.name ?? "Brand",
+  const handleStatusUpdate = async (orderId: string, nextStatus: string) => {
+    try {
+      const updated = await updateOrderStatus(orderId, nextStatus);
+      setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, status: updated.status } : order)));
+      setError(null);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Unable to update order status.");
+    }
+  };
+
+  const totalOrders = orders.length;
+  const pendingOrders = orders.filter((order) => order.status === "PENDING").length;
+  const shippedOrders = orders.filter((order) => order.status === "SHIPPED").length;
+  const orderRows = orders.map((order) => ({
+    id: order.id,
+    customer: order.user?.name ?? "Customer",
+    email: order.user?.email ?? "customer@example.com",
+    total: Number(order.total ?? 0),
+    items: order.items?.map((item) => `${item.quantity}× ${item.product?.name ?? "Product"}`).join(", ") || "Order",
+    status: order.status,
+    date: order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-ZA", { month: "short", day: "numeric", year: "numeric" }) : "No date",
   }));
 
   return (
@@ -48,55 +64,64 @@ export default function StudioOrders() {
       actions={
         <>
           <input className="search" placeholder="Search by order #, customer, or product…" />
-          <button className="btn ">📅 Apr 1, 2025 – Apr 27, 2025 ▾</button>
+          <button className="btn ">📅 {orders.length ? "Live orders" : "No orders"}</button>
         </>
       }
     >
       <div className="split">
         <div>
           <div className="tabs">
-            <a href="#" className="on">All {orderCount}</a>
-            <a href="#">Unfulfilled {Math.max(1, Math.round(orderCount * 0.28))}</a>
-            <a href="#">Shipped {Math.max(1, Math.round(orderCount * 0.72))}</a>
-            <a href="#">Preorders 6</a>
+            <a href="#" className="on">All {totalOrders}</a>
+            <a href="#">Pending {pendingOrders}</a>
+            <a href="#">Shipped {shippedOrders}</a>
           </div>
-          <div className="wrap">
-            <table>
-              <tbody>
-                <tr>
-                  <th>ORDER #</th>
-                  <th>CUSTOMER</th>
-                  <th>DATE</th>
-                  <th>ITEMS</th>
-                  <th>TOTAL</th>
-                  <th>STATUS</th>
-                </tr>
-                {orderRows.map((row, index) => (
-                  <tr key={row.id}>
-                    <td>
-                      <b>{row.id}</b>
-                    </td>
-                    <td>
-                      {row.customer}
-                      <span className="sub">{row.email}</span>
-                    </td>
-                    <td>
-                      {row.date}
-                      <span className="sub">{index % 2 === 0 ? "10:24 AM" : "4:17 PM"}</span>
-                    </td>
-                    <td>
-                      <span className="thumb t1" />
-                      {row.items}
-                    </td>
-                    <td>R{Number(row.total).toFixed(2)}</td>
-                    <td>
-                      <span className={`pill ${row.status === "Unfulfilled" ? "orange" : "green"}`}>{row.status}</span>
-                    </td>
+          {error && <p className="auth-error" style={{ marginBottom: 12 }}>{error}</p>}
+          {loading ? (
+            <div className="card">Loading orders…</div>
+          ) : (
+            <div className="wrap">
+              <table>
+                <tbody>
+                  <tr>
+                    <th>ORDER #</th>
+                    <th>CUSTOMER</th>
+                    <th>DATE</th>
+                    <th>ITEMS</th>
+                    <th>TOTAL</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  {orderRows.map((row) => (
+                    <tr key={row.id}>
+                      <td><b>{row.id.slice(0, 8).toUpperCase()}</b></td>
+                      <td>
+                        {row.customer}
+                        <span className="sub">{row.email}</span>
+                      </td>
+                      <td>{row.date}</td>
+                      <td>{row.items}</td>
+                      <td>R{Number(row.total).toFixed(2)}</td>
+                      <td>
+                        <span className={`pill ${row.status === "SHIPPED" ? "green" : row.status === "CANCELLED" ? "orange" : "blue"}`}>{row.status}</span>
+                      </td>
+                      <td>
+                        <select
+                          value={row.status}
+                          onChange={(event) => void handleStatusUpdate(row.id, event.target.value)}
+                          aria-label={`Update order ${row.id} status`}
+                        >
+                          <option value="PENDING">Pending</option>
+                          <option value="PAID">Paid</option>
+                          <option value="SHIPPED">Shipped</option>
+                          <option value="CANCELLED">Cancelled</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

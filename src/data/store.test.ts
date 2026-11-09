@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchBrands } from "../lib/store-api";
+import { createBrand, fetchBrands } from "../lib/store-api";
 import { addProductToStore, getBrandProducts, replaceStoreProducts, STORE } from "./store";
 
 describe("store owner data model", () => {
@@ -50,6 +50,24 @@ describe("store owner data model", () => {
 
     expect(STORE.products.length).toBe(snapshot.length + 1);
     expect(STORE.products[STORE.products.length - 1].sku).toBe("RT-JK-777");
+  });
+
+  it("creates a brand from the API response payload", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ brand: { id: "brand-42", name: "Northline Co.", description: "New brand", ownerId: "owner-1" } }),
+      }),
+    );
+
+    await expect(createBrand({ name: "Northline Co.", description: "New brand" })).resolves.toMatchObject({
+      id: "brand-42",
+      name: "Northline Co.",
+      ownerId: "owner-1",
+    });
+
+    vi.unstubAllGlobals();
   });
 
   it("returns an empty list when the brand API responds with no payload", async () => {
