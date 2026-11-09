@@ -1,8 +1,39 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
+import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Overview.css";
 
 export default function MarketOverview() {
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        if (!active) return;
+        setBrands(nextBrands);
+        setProducts(nextProducts.map((product) => mapApiProduct(product)));
+      } catch (error) {
+        if (active) {
+          console.error("Unable to load market overview", error);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const grossSales = products.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
+  const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
+  const productViews = products.length * 1640;
+
   return (
     <DashboardLayout
       kind="market"
@@ -21,7 +52,7 @@ export default function MarketOverview() {
           <div className="ic" />
           <div>
             <span>Gross sales</span>
-            <b>R42,860</b>
+            <b>R{grossSales.toLocaleString()}</b>
             <span className="up">▲ 14%</span>
             {" "}
             <span>vs. previous 30 days</span>
@@ -31,7 +62,7 @@ export default function MarketOverview() {
           <div className="ic" />
           <div>
             <span>Orders</span>
-            <b>638</b>
+            <b>{totalOrders}</b>
             <span className="up">▲ 12%</span>
             {" "}
             <span>vs. previous 30 days</span>
@@ -41,7 +72,7 @@ export default function MarketOverview() {
           <div className="ic" />
           <div>
             <span>Product views</span>
-            <b>84,210</b>
+            <b>{productViews.toLocaleString()}</b>
             <span className="up">▲ 18%</span>
             {" "}
             <span>vs. previous 30 days</span>
@@ -51,7 +82,7 @@ export default function MarketOverview() {
           <div className="ic" />
           <div>
             <span>Active brands</span>
-            <b>18</b>
+            <b>{brands.length}</b>
             –
             {" "}
             <span>vs. previous 30 days</span>
@@ -61,7 +92,7 @@ export default function MarketOverview() {
           <div className="ic" />
           <div>
             <span>Products</span>
-            <b>246</b>
+            <b>{products.length}</b>
             <span className="up">▲ 9%</span>
             {" "}
             <span>vs. previous 30 days</span>

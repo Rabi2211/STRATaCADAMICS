@@ -33,3 +33,26 @@
   height:auto;
   display:block;
 }
+
+@media (max-width: 900px) {
+  .dash .seg {
+    flex-wrap:wrap;
+  }
+
+  .dash .bar {
+    margin-top:8px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dash .seg {
+    width:100%;
+    justify-content:space-between;
+  }
+
+  .dash .seg span {
+    flex:1 1 25%;
+    text-align:center;
+    padding:6px 4px;
+  }
+}

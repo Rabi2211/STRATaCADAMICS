@@ -68,6 +68,7 @@ export default function StoreHeader() {
   const [session, setSession] = useState(() => getStoredAuthSession());
   const [form, setForm] = useState<AuthFormState>(initialFormState);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -122,9 +123,17 @@ export default function StoreHeader() {
       ? "Seller Studio"
       : null;
 
+  const handleForgotPassword = () => {
+    setError(null);
+    setNotice(null);
+    setIsAuthOpen(false);
+    navigate("/reset-password");
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setNotice(null);
 
     if (!form.email.trim() || !form.password.trim()) {
       setError("Email and password are required.");
@@ -151,6 +160,10 @@ export default function StoreHeader() {
             name: getRegistrationDisplayName(form.fullName, form.brandName, form.email, selectedRole),
             role: selectedRole,
           });
+
+      if (!nextSession?.user) {
+        throw new Error("Authentication response was empty.");
+      }
 
       setSession(nextSession);
       setForm(initialFormState);
@@ -298,6 +311,13 @@ export default function StoreHeader() {
               )}
 
               {error && <p className="auth-error">{error}</p>}
+              {notice && <p className="auth-success">{notice}</p>}
+
+              {authMode === "login" && (
+                <button type="button" className="auth-link" onClick={handleForgotPassword} disabled={isSubmitting}>
+                  Forgot password?
+                </button>
+              )}
 
               <button type="submit" className="btn auth-submit" disabled={isSubmitting}>
                 {isSubmitting ? "Please wait..." : `${authMode === "login" ? "Login as " : "Register as "}${roleLabel[selectedRole]}`}

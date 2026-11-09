@@ -1,10 +1,53 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { STORE, STORE_SUMMARY, getInventoryRows } from "../../data/store";
+import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Inventory.css";
 
+type InventoryRow = Omit<ReturnType<typeof mapApiProduct>, "status"> & {
+  brand?: ApiBrand;
+  committed: number;
+  status: string;
+};
+
 export default function MarketInventory() {
-  const inventoryRows = getInventoryRows();
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        if (!active) return;
+        setBrands(nextBrands);
+        setProducts(nextProducts.map((product) => mapApiProduct(product)));
+      } catch (error) {
+        if (active) {
+          console.error("Unable to load inventory", error);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const inventoryRows: InventoryRow[] = products.map((product) => {
+    const brand = brands.find((item) => item.id === product.brandId);
+    return {
+      ...product,
+      brand,
+      committed: Math.max(2, Math.round(product.available * 0.08)),
+      status: product.available <= 25 ? "Low stock" : "In stock",
+    };
+  });
+
   const lowStock = inventoryRows.filter((product) => product.available <= 25);
+  const totalUnits = inventoryRows.reduce((sum, product) => sum + product.available, 0);
+  const lowStockCount = lowStock.length;
 
   return (
     <DashboardLayout
@@ -16,7 +59,7 @@ export default function MarketInventory() {
           <input className="search" placeholder="Search products, brands or SKU…" />
           <select className="search">
             <option>All brands</option>
-            {STORE.brands.map((brand) => (
+            {brands.map((brand) => (
               <option key={brand.id}>{brand.name}</option>
             ))}
           </select>
@@ -32,20 +75,20 @@ export default function MarketInventory() {
           <div className="ic" />
           <div>
             <span>Total units in stock</span>
-            <b>{STORE_SUMMARY.totalUnits}</b>
+            <b>{totalUnits}</b>
             <span className="up">▲ 12%</span>
             {" "}
-            <span>Across {STORE.brands.length} brands</span>
+            <span>Across {brands.length} brands</span>
           </div>
         </div>
         <div className="card stat">
           <div className="ic" />
           <div>
             <span>Low stock (≤ 25 units)</span>
-            <b>{STORE_SUMMARY.lowStockProducts}</b>
+            <b>{lowStockCount}</b>
             <span className="up">▼ -28%</span>
             {" "}
-            <span>Across {STORE.brands.length} brands</span>
+            <span>Across {brands.length} brands</span>
           </div>
         </div>
         <div className="card stat">
@@ -55,7 +98,7 @@ export default function MarketInventory() {
             <b>{inventoryRows.filter((product) => product.available === 0).length}</b>
             <span className="up">▼ -46%</span>
             {" "}
-            <span>Across {STORE.brands.length} brands</span>
+            <span>Across {brands.length} brands</span>
           </div>
         </div>
       </div>

@@ -8,3 +8,10 @@
   padding:4px 10px;
   background:#fffefd;
 }
+
+@media (max-width: 560px) {
+  .dash .qty {
+    width:100%;
+    justify-content:space-between;
+  }
+}

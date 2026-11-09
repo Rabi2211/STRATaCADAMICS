@@ -1,14 +1,40 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { STORE } from "../../data/store";
+import { fetchBrands, type ApiBrand } from "../../lib/store-api";
 import "./Settings.css";
 
 export default function MarketSettings() {
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const nextBrands = await fetchBrands();
+        if (!active) return;
+        setBrands(nextBrands);
+      } catch (error) {
+        if (active) {
+          console.error("Unable to load store settings", error);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const storeName = brands[0]?.name ? `${brands[0].name} Store` : "STRATA Market";
+
   return (
     <DashboardLayout
       kind="market"
       title={"Store settings"}
-      subtitle={`Manage ${STORE.name} details, policies and access for the store owner account.`}
+      subtitle={`Manage ${storeName} details, policies and access for the store owner account.`}
       actions={
         <>
           🔔
@@ -31,7 +57,7 @@ export default function MarketSettings() {
           <br />
           <div className="field">
             <label>Marketplace store name *</label>
-            <input defaultValue={STORE.name} />
+            <input defaultValue={storeName} />
           </div>
           <div className="field">
             <label>Store URL *</label>
@@ -42,7 +68,7 @@ export default function MarketSettings() {
           </label>
           <div style={{display: "flex", gap: "14px", alignItems: "center", margin: "6px 0 14px"}}>
             <div className="card">
-              <b style={{fontSize: "20px"}}>STRATA</b>
+              <b style={{fontSize: "20px"}}>{(storeName || "STRATA").slice(0, 6).toUpperCase()}</b>
             </div>
             <div>
               <button className="btn pri">⬆ Upload logo</button>
