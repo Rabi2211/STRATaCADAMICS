@@ -1,83 +1,41 @@
-import { useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import StoreLayout from "../../components/StoreLayout";
+import { STORE, filterAndSortProducts, type StoreProduct } from "../../data/store";
 import { addToCart } from "../../lib/cart";
 import "./MensItems.css";
 
-interface Product {
-  id: string;
-  price: string;
-  name: string;
-  sizes: string;
-  hoodie?: boolean;
-}
-
-const CATEGORY_DATA: Record<string, { title: string; categories: string[]; products: Product[]; trending: Product[] }> = {
-  men: {
-    title: "MEN’S ITEMS",
-    categories: ["JEANS", "T-SHIRTS", "JEANS", "SWEATERS", "PANTS"],
-    products: [
-      { id: "mug-tee", price: "R700", name: "NEW PUNK COFFEE MUG STAIN TEE", sizes: "XS - XXXL" },
-      { id: "speedy-tee", price: "R700", name: "SPEEDY GONZALES NEW PUNK TEE", sizes: "XS - XXXL" },
-      { id: "hoodie", price: "R750", name: "NEW PUNK 1 OF A KIND (ONLY 1 AVAIL)", sizes: "1 SMALL", hoodie: true },
-    ],
-    trending: [
-      { id: "mug-tee", price: "R700", name: "NEW PUNK COFFEE MUG STAIN TEE", sizes: "XS - XXXL" },
-      { id: "hoodie", price: "R750", name: "NEW PUNK 1 OF A KIND (ONLY 1 AVAIL)", sizes: "1 SMALL", hoodie: true },
-    ],
-  },
-  women: {
-    title: "WOMEN’S ITEMS",
-    categories: ["DRESSES", "TOPS", "OUTERWEAR", "TRENDS", "SALE"],
-    products: [
-      { id: "w-1", price: "R650", name: "WOMEN NEW PUNK CUTOUT TOP", sizes: "XS - XXL" },
-      { id: "w-2", price: "R780", name: "SILK DRAPE CHIC DRESS", sizes: "XS - XXL" },
-      { id: "w-3", price: "R820", name: "LAYERED WOOL COAT", sizes: "S - XL", hoodie: true },
-    ],
-    trending: [
-      { id: "w-1", price: "R650", name: "WOMEN NEW PUNK CUTOUT TOP", sizes: "XS - XXL" },
-      { id: "w-3", price: "R820", name: "LAYERED WOOL COAT", sizes: "S - XL", hoodie: true },
-    ],
-  },
-  kids: {
-    title: "KIDS’ ITEMS",
-    categories: ["PLAY", "OUTERWEAR", "ESSENTIALS", "GRAPHICS", "SALE"],
-    products: [
-      { id: "k-1", price: "R420", name: "KIDS GRAPHIC TEE", sizes: "4 - 12Y" },
-      { id: "k-2", price: "R560", name: "ADVENTURE ZIP HOODY", sizes: "4 - 12Y" },
-      { id: "k-3", price: "R480", name: "PLAY READY CHINO", sizes: "4 - 12Y", hoodie: true },
-    ],
-    trending: [
-      { id: "k-2", price: "R560", name: "ADVENTURE ZIP HOODY", sizes: "4 - 12Y" },
-      { id: "k-3", price: "R480", name: "PLAY READY CHINO", sizes: "4 - 12Y", hoodie: true },
-    ],
-  },
+const SECTION_DATA: Record<string, { title: string; categories: string[] }> = {
+  men: { title: "MEN’S ITEMS", categories: ["All", "Pants", "Shirts", "Sweaters", "Outerwear", "Tops"] },
+  women: { title: "WOMEN’S ITEMS", categories: ["All", "Sweaters", "Pants", "Outerwear", "Shirts", "Tops"] },
+  kids: { title: "KIDS’ ITEMS", categories: ["All", "Tops", "Outerwear", "Shirts", "Pants"] },
 };
 
-function ProductCard({ product }: { product: Product }) {
-  const priceNumber = Number(String(product.price).replace(/[^\d.]/g, ""));
-
+function ProductCard({ product }: { product: StoreProduct }) {
   const handleAddToCart = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
     addToCart({
       id: product.id,
       name: product.name,
-      price: priceNumber,
-      brandId: "storefront",
-      imageClass: product.hoodie ? "hood" : "t1",
+      price: product.price,
+      brandId: product.brandId,
+      imageClass: product.imageClass,
     }, 1);
   };
 
   return (
-    <div className="prod" aria-label={`${product.name} from the ${product.price} category`}>
-      <div className={`img${product.hoodie ? " hood" : ""}`}>
+    <div className="prod" aria-label={`${product.name} from ${product.category}`}>
+      <div className="img" style={{ background: "linear-gradient(135deg, #efe4d5 0%, #d9d0c7 100%)" }}>
         <span>♡</span>
       </div>
-      <b>{product.price}</b>
+      <b>R{product.price.toFixed(2)}</b>
       <p>{product.name}</p>
-      <small>SIZES: {product.sizes}</small>
-      <button type="button" className="btn btn--small" onClick={handleAddToCart}>Add to cart</button>
+      <small>SKU: {product.sku}</small>
+      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+        <Link to={`/product/${product.id}`} className="btn btn--small" style={{ display: "inline-block", textDecoration: "none" }}>View details</Link>
+        <button type="button" className="btn btn--small" onClick={handleAddToCart}>Add to cart</button>
+      </div>
     </div>
   );
 }
@@ -90,33 +48,79 @@ export default function MensItems() {
     return "men";
   }, [location.pathname]);
 
-  const current = CATEGORY_DATA[section];
+  const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [sort, setSort] = useState<"featured" | "price-asc" | "price-desc" | "name-asc">("featured");
+
+  const sectionProducts = useMemo(() => {
+    const products = STORE.products.filter((product) => {
+      if (section === "men") return ["Pants", "Shirts", "Sweaters", "Outerwear", "Tops"].includes(product.category);
+      if (section === "women") return ["Sweaters", "Pants", "Outerwear", "Shirts", "Tops"].includes(product.category);
+      return ["Tops", "Outerwear", "Shirts", "Pants"].includes(product.category);
+    });
+
+    return filterAndSortProducts(products, {
+      query,
+      category: selectedCategory === "All" ? undefined : selectedCategory,
+      sort,
+    });
+  }, [query, section, selectedCategory, sort]);
+
+  const current = SECTION_DATA[section];
 
   return (
     <StoreLayout>
       <section className="mhero">
         <h1 className="display">{current.title}</h1>
-        <nav className="chips">
-          {current.categories.map((c, i) => (
-            <a key={`${section}-${i}`} href="#">{c}</a>
+        <nav className="chips" aria-label="Product categories">
+          {current.categories.map((category) => (
+            <button
+              key={`${section}-${category}`}
+              type="button"
+              aria-pressed={selectedCategory === category}
+              className={selectedCategory === category ? "is-active" : ""}
+              onClick={() => setSelectedCategory(category)}
+            >
+              {category}
+            </button>
           ))}
         </nav>
-        <button className="feedback" type="button">feedback</button>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search products"
+            aria-label="Search products"
+            style={{ minWidth: 220, padding: "10px 12px", borderRadius: 10, border: "1px solid #d8d0c6" }}
+          />
+          <select
+            aria-label="Sort products"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as typeof sort)}
+            style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #d8d0c6" }}
+          >
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="name-asc">Name A-Z</option>
+          </select>
+        </div>
       </section>
 
       <section className="pgrid">
-        {current.products.map((p) => <ProductCard key={`${section}-${p.id}`} product={p} />)}
+        {sectionProducts.length === 0 ? (
+          <div style={{ gridColumn: "1 / -1", border: "1px solid #eadfce", background: "#fff", borderRadius: 12, padding: 20 }}>
+            No products match this filter yet. Try another category or search term.
+          </div>
+        ) : (
+          sectionProducts.map((product) => <ProductCard key={`${section}-${product.id}`} product={product} />)
+        )}
       </section>
 
       <div className="more">
-        You have seen 3 out of 100 products
-        <a className="btn" href="#">SHOW THE NEXT 6 RESULTS</a>
+        {sectionProducts.length} product{sectionProducts.length === 1 ? "" : "s"} ready to shop
       </div>
-
-      <h2 className="trend">TRENDING NOW</h2>
-      <section className="pgrid">
-        {current.trending.map((p) => <ProductCard key={`${section}-${p.id}-trend`} product={p} />)}
-      </section>
 
       <p className="quote">
         “A couturier must be an architect for design, a sculptor for shape, a painter for color, a musician for harmony, and a philosopher for temperance.” – Cristóbal Balenciaga

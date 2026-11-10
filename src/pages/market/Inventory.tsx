@@ -150,7 +150,7 @@ export default function MarketInventory() {
           <section className="card ">
             <h3>
               Stock alerts
-              <a href="#">View all →</a>
+              <a href="/market/overview">View all →</a>
             </h3>
             {lowStock.map((product) => (
               <div className="row" key={product.id}>

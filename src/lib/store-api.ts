@@ -49,6 +49,14 @@ export type ApiOrder = {
   total: number | string;
   createdAt?: string;
   updatedAt?: string;
+  paymentMethod?: string;
+  shippingAddress?: {
+    fullName?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+  };
   user?: {
     id: string;
     email: string;
@@ -214,6 +222,14 @@ export async function deleteProduct(id: string): Promise<ApiProduct> {
 
 export async function createOrder(input: {
   items: Array<{ productId: string; quantity: number }>;
+  paymentMethod?: string;
+  shippingAddress?: {
+    fullName?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+  };
 }): Promise<ApiOrder> {
   const payload = await apiRequest<{ order?: ApiOrder }>('/api/orders', {
     method: 'POST',
@@ -225,6 +241,29 @@ export async function createOrder(input: {
   }
 
   return payload.order;
+}
+
+export function getOrderTrackingSteps(status?: string) {
+  const normalizedStatus = String(status ?? "Pending").trim();
+  const steps = [
+    { label: "Order placed", complete: true },
+    { label: "Payment confirmed", complete: ["Paid", "Processing", "Shipped", "Delivered"].includes(normalizedStatus) },
+    { label: "Packed", complete: ["Processing", "Shipped", "Delivered"].includes(normalizedStatus) },
+    { label: "Shipped", complete: ["Shipped", "Delivered"].includes(normalizedStatus) },
+    { label: "Delivered", complete: normalizedStatus === "Delivered" },
+  ];
+
+  if (["Cancelled", "Failed"].includes(normalizedStatus)) {
+    return [
+      { label: "Order placed", complete: true },
+      { label: "Payment confirmed", complete: false },
+      { label: "Packed", complete: false },
+      { label: "Shipped", complete: false },
+      { label: "Delivered", complete: false },
+    ];
+  }
+
+  return steps;
 }
 
 export async function fetchOrders(): Promise<ApiOrder[]> {

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
@@ -38,7 +39,7 @@ export default function MarketAnalytics() {
       title={"Analytics"}
       subtitle={
         <>
-          <a href="#" style={{color: "var(--acc)"}}>All brands</a>
+          <Link to="/market/brands" style={{color: "var(--acc)"}}>All brands</Link>
           {" "}
           · Your entire marketplace, aggregated across all brands.
         </>
@@ -140,7 +141,7 @@ export default function MarketAnalytics() {
         <section className="card ">
           <h3>
             Brand performance
-            <a href="#">View all brands →</a>
+            <Link to="/market/brands">View all brands →</Link>
           </h3>
           <div className="wrap">
             <table>
@@ -179,7 +180,7 @@ export default function MarketAnalytics() {
         <section className="card ">
           <h3>
             Top products (all brands)
-            <a href="#">View all products →</a>
+            <Link to="/market/products">View all products →</Link>
           </h3>
           <div className="wrap">
             <table>
@@ -213,7 +214,7 @@ export default function MarketAnalytics() {
         <section className="card ">
           <h3>
             Traffic sources (all brands)
-            <a href="#">View details →</a>
+            <Link to="/market/overview">View details →</Link>
           </h3>
           <div style={{display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap"}}>
             <div className="donut" style={{background: `conic-gradient(#c4664a 0% ${Math.min(100, (productViews / Math.max(1, productViews + productViews * 0.5)) * 100)}%, #dd9a82 ${Math.min(100, (productViews / Math.max(1, productViews + productViews * 0.5)) * 100)}% 70%, #ecd3c6 70% 85%, #7a8a75 85% 94%, #b9b6ad 94% 98%)`}}>

@@ -43,12 +43,12 @@ export default function MarketSettings() {
       }
     >
       <div className="tabs">
-        <a href="#" className="on">General</a>
-        <a href="#">Storefront</a>
-        <a href="#">Shipping</a>
-        <a href="#">Notifications</a>
-        <a href="#">Payments</a>
-        <a href="#">Team & permissions</a>
+        <button type="button" className="on">General</button>
+        <button type="button">Storefront</button>
+        <button type="button">Shipping</button>
+        <button type="button">Notifications</button>
+        <button type="button">Payments</button>
+        <button type="button">Team & permissions</button>
       </div>
       <div className="grid g32">
         <section className="card ">

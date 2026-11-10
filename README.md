@@ -7,6 +7,29 @@ npm install
 npm --prefix server install
 ```
 
+### South African payment setup
+
+This storefront supports OZOW and Peach Payments as checkout providers. Add the provider details to your environment before enabling redirect checkout:
+
+```bash
+cp .env.example .env
+```
+
+Example values:
+
+```env
+VITE_OZOW_MERCHANT_ID=your_ozow_merchant_id
+VITE_OZOW_API_KEY=your_ozow_api_key
+VITE_PEACH_PUBLIC_KEY=your_peach_public_key
+VITE_PEACH_BASE_URL=https://sandbox.peachpayments.com
+VITE_BOP_MERCHANT_ID=your_bop_merchant_id
+VITE_BOP_API_KEY=your_bop_api_key
+VITE_BOP_BASE_URL=https://sandbox.boppay.co.za
+VITE_PAYMENT_MODE=sandbox
+```
+
+If those values are not configured, the app will still run in demo mode and show the secure redirect flow without completing a live payment.
+
 ### Firebase setup
 
 1. Create a Firebase project in the Firebase console.

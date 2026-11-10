@@ -1,10 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Overview.css";
 
 export default function MarketOverview() {
+  const navigate = useNavigate();
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
 
@@ -41,7 +42,7 @@ export default function MarketOverview() {
       subtitle={"Manage your entire store — brands, products, orders, inventory and more from one owner account."}
       actions={
         <>
-          <button className="btn ">📅 Apr 20, 2025 – May 20, 2025 ▾</button>
+          <button type="button" className="btn " onClick={() => navigate("/market/orders")}>📅 Apr 20, 2025 – May 20, 2025 ▾</button>
           🔔
           <Link to="/" className="btn pri">View storefront ↗</Link>
         </>
@@ -165,7 +166,7 @@ export default function MarketOverview() {
           <section className="card ">
             <h3>
               Orders needing attention
-              <a href="#">View all orders →</a>
+              <Link to="/market/orders">View all orders →</Link>
             </h3>
             <div className="wrap">
               <table>
@@ -193,7 +194,7 @@ export default function MarketOverview() {
                       <span className="pill orange">Processing</span>
                     </td>
                     <td>
-                      <button className="btn ">View order</button>
+                      <Link to="/market/orders" className="btn">View order</Link>
                     </td>
                   </tr>
                   <tr>
@@ -211,7 +212,7 @@ export default function MarketOverview() {
                       <span className="pill green">Paid</span>
                     </td>
                     <td>
-                      <button className="btn ">View order</button>
+                      <Link to="/market/orders" className="btn">View order</Link>
                     </td>
                   </tr>
                   <tr>
@@ -229,7 +230,7 @@ export default function MarketOverview() {
                       <span className="pill green">Shipped</span>
                     </td>
                     <td>
-                      <button className="btn ">View order</button>
+                      <Link to="/market/orders" className="btn">View order</Link>
                     </td>
                   </tr>
                   <tr>
@@ -247,7 +248,7 @@ export default function MarketOverview() {
                       <span className="pill orange">Processing</span>
                     </td>
                     <td>
-                      <button className="btn ">View order</button>
+                      <Link to="/market/orders" className="btn">View order</Link>
                     </td>
                   </tr>
                   <tr>
@@ -265,7 +266,7 @@ export default function MarketOverview() {
                       <span className="pill green">Paid</span>
                     </td>
                     <td>
-                      <button className="btn ">View order</button>
+                      <Link to="/market/orders" className="btn">View order</Link>
                     </td>
                   </tr>
                 </tbody>
@@ -360,7 +361,7 @@ export default function MarketOverview() {
           <section className="card ">
             <h3>
               Low stock / inventory alerts
-              <a href="#">View all inventory →</a>
+              <Link to="/market/inventory">View all inventory →</Link>
             </h3>
             <div className="wrap">
               <table>
@@ -437,7 +438,7 @@ export default function MarketOverview() {
           <section className="card ">
             <h3>
               Latest blog posts
-              <a href="#">Manage blog →</a>
+              <Link to="/market/blog">Manage blog →</Link>
             </h3>
             <div className="ord">
               <span className="thumb t1" />

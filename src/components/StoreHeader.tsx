@@ -196,12 +196,16 @@ export default function StoreHeader() {
                 <span /><span />
               </button>
               <nav className="menu-panel__nav" aria-label="Main menu">
-                {menuItems.map((item) => (
-                  <a key={item.label} href="#" className="menu-panel__item">
-                    <span>{item.label}</span>
-                    {item.secondary ? <em>{item.secondary}</em> : null}
-                  </a>
-                ))}
+                {menuItems.map((item) => {
+                  const route = item.label === "Women" ? "/women" : item.label === "Men" ? "/men" : item.label === "Kids" ? "/kids" : item.label === "Sales" ? "/sales" : "/blog";
+
+                  return (
+                    <Link key={item.label} to={route} className="menu-panel__item" onClick={() => setIsMenuOpen(false)}>
+                      <span>{item.label}</span>
+                      {item.secondary ? <em>{item.secondary}</em> : null}
+                    </Link>
+                  );
+                })}
               </nav>
             </div>
           )}

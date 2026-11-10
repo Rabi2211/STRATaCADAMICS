@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { addToCart, clearCart, getCartSummary, readCart } from "./cart";
+import { addToCart, clearCart, getCartSummary, getCheckoutSummary, readCart } from "./cart";
 
 const createMemoryStorage = () => {
   const values = new Map<string, string>();
@@ -49,5 +49,18 @@ describe("cart helpers", () => {
     expect(readCart()).toHaveLength(1);
     expect(getCartSummary().totalItems).toBe(2);
     expect(getCartSummary().subtotal).toBe(1400);
+  });
+
+  it("adds shipping, tax, and delivery estimates to checkout totals", () => {
+    const summary = getCheckoutSummary([
+      { id: "p-1", name: "Graphic Tee", price: 700, quantity: 1 },
+      { id: "p-2", name: "Canvas Jacket", price: 1420, quantity: 1 },
+    ]);
+
+    expect(summary.subtotal).toBe(2120);
+    expect(summary.shipping).toBe(0);
+    expect(summary.tax).toBe(318);
+    expect(summary.total).toBe(2438);
+    expect(summary.deliveryWindow).toContain("3-5");
   });
 });

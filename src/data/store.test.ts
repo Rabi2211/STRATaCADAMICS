@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { createBrand, fetchBrands } from "../lib/store-api";
-import { addProductToStore, getBrandProducts, replaceStoreProducts, STORE } from "./store";
+import { createBrand, fetchBrands, getOrderTrackingSteps } from "../lib/store-api";
+import { addProductToStore, filterAndSortProducts, getBrandProducts, getProductById, replaceStoreProducts, STORE } from "./store";
+import { FEATURED_COLLECTIONS } from "./storefront";
 
 describe("store owner data model", () => {
   it("adds a product to a selected brand and updates the store inventory", () => {
@@ -52,6 +53,18 @@ describe("store owner data model", () => {
     expect(STORE.products[STORE.products.length - 1].sku).toBe("RT-JK-777");
   });
 
+  it("filters and sorts the storefront catalog for credible browsing", () => {
+    const results = filterAndSortProducts(STORE.products, {
+      query: "linen",
+      category: "Pants",
+      sort: "price-desc",
+    });
+
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].category).toBe("Pants");
+    expect(results[0].name.toLowerCase()).toContain("linen");
+  });
+
   it("creates a brand from the API response payload", async () => {
     vi.stubGlobal(
       "fetch",
@@ -82,5 +95,30 @@ describe("store owner data model", () => {
     await expect(fetchBrands()).resolves.toEqual([]);
 
     vi.unstubAllGlobals();
+  });
+
+  it("maps order statuses to a meaningful fulfillment timeline", () => {
+    const tracking = getOrderTrackingSteps("Paid");
+
+    expect(tracking).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Order placed", complete: true }),
+      expect.objectContaining({ label: "Payment confirmed", complete: true }),
+      expect.objectContaining({ label: "Packed", complete: false }),
+    ]));
+  });
+
+  it("loads a product detail payload with its brand metadata", () => {
+    const result = getProductById("ab-knit-sweater");
+
+    expect(result).toBeTruthy();
+    expect(result?.product.name).toBe("Atelier Belle Knit Sweater");
+    expect(result?.brand?.name).toBe("Atelier Belle");
+    expect(result?.reviews.length).toBeGreaterThan(0);
+  });
+
+  it("exposes curated featured collections for the storefront landing page", () => {
+    expect(FEATURED_COLLECTIONS).toHaveLength(3);
+    expect(FEATURED_COLLECTIONS.map((collection) => collection.id)).toEqual(expect.arrayContaining(["quiet-luxury", "city-layers", "weekend-edit"]));
+    expect(FEATURED_COLLECTIONS[0].productIds).toEqual(expect.arrayContaining(["ab-knit-sweater", "rt-wide-trousers"]));
   });
 });

@@ -77,10 +77,10 @@ export default function MarketOrders() {
           <br />
           <br />
           <div className="tabs">
-            <a href="#" className="on">All {totalOrders}</a>
-            <a href="#">Pending {pendingOrders}</a>
-            <a href="#">Shipped {shippedOrders}</a>
-            <a href="#">Awaiting shipment {awaitingShipment}</a>
+            <button type="button" className="on">All {totalOrders}</button>
+            <button type="button">Pending {pendingOrders}</button>
+            <button type="button">Shipped {shippedOrders}</button>
+            <button type="button">Awaiting shipment {awaitingShipment}</button>
           </div>
           {error && <p className="auth-error" style={{ marginBottom: 12 }}>{error}</p>}
           {loading ? (

@@ -1,7 +1,8 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import StoreLayout from "../../components/StoreLayout";
 import { STORE } from "../../data/store";
-import { PROMOS } from "../../data/storefront";
+import { FEATURED_COLLECTIONS, PROMOS } from "../../data/storefront";
 import "./Home.css";
 
 function Hero() {
@@ -81,6 +82,78 @@ function Carousel({ count, tall = false, label }: { count: number; tall?: boolea
   );
 }
 
+function FeaturedCollections() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % FEATURED_COLLECTIONS.length);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const visibleCollections = Array.from({ length: 3 }, (_, offset) => {
+    const index = (activeIndex + offset - 1 + FEATURED_COLLECTIONS.length) % FEATURED_COLLECTIONS.length;
+    return FEATURED_COLLECTIONS[index];
+  });
+
+  return (
+    <section className="featured">
+      <div className="featured__header">
+        <div>
+          <p className="eyebrow">The seasonal edit</p>
+          <h2>Editorial edits for the season</h2>
+        </div>
+        <Link to="/men" className="btn btn--small">Shop all</Link>
+      </div>
+
+      <div className="featured__slider">
+        {visibleCollections.map((collection, offset) => {
+          const items = collection.productIds
+            .map((productId) => STORE.products.find((product) => product.id === productId))
+            .filter(Boolean) as typeof STORE.products;
+
+          const isCenter = offset === 1;
+
+          return (
+            <article
+              key={`${collection.id}-${offset}`}
+              className={`feature-card feature-card--${isCenter ? "center" : "side"}`}
+            >
+              <div className="feature-card__meta">
+                <span>{collection.subtitle}</span>
+                <span>{String((FEATURED_COLLECTIONS.indexOf(collection) + 1) || 1).padStart(2, "0")}</span>
+              </div>
+
+              <div className="feature-card__copy">
+                <p className="eyebrow">Seasonal pick</p>
+                <h3>{collection.title}</h3>
+                <p>{collection.description}</p>
+                <Link to="/men" className="btn btn--small">{collection.cta}</Link>
+              </div>
+
+              <div className="feature-card__items">
+                {items.map((product) => (
+                  <Link key={product.id} to={`/product/${product.id}`} className="feature-card__item">
+                    <div className="feature-card__visual">
+                      <div className="feature-card__swatch" aria-hidden="true" />
+                    </div>
+                    <div className="feature-card__text">
+                      <strong>{product.name}</strong>
+                      <span>R{product.price.toFixed(2)}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function Catalog() {
   return (
     <section className="catalog">
@@ -93,11 +166,11 @@ function Catalog() {
             <h3 className="catalog__heading">{brand.name.toUpperCase()} <span aria-hidden="true">▾</span></h3>
             <div className="carousel">
               {products.map((product) => (
-                <a key={product.id} href="#" className="card" aria-label={`${product.name} by ${brand.name}`}>
+                <Link key={product.id} to={`/product/${product.id}`} className="card" aria-label={`${product.name} by ${brand.name}`}>
                   <span style={{ display: "block", marginTop: "auto", fontSize: 12, color: "#241f1d", fontWeight: 700 }}>
                     {product.name}
                   </span>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -122,6 +195,7 @@ export default function Home() {
     <StoreLayout>
       <Hero />
       <PromoRow />
+      <FeaturedCollections />
       <Catalog />
       <Stories />
     </StoreLayout>

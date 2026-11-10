@@ -4,6 +4,8 @@ import DashboardLayout from "../../components/DashboardLayout";
 import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Overview.css";
 
+type FulfillmentState = Record<string, { shipped: boolean; trackingAdded: boolean }>;
+
 export default function StudioOverview() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
@@ -34,6 +36,25 @@ export default function StudioOverview() {
   const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
   const totalRevenue = products.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
   const productViews = products.length * 1640;
+  const [fulfillment, setFulfillment] = useState<FulfillmentState>({
+    "#1043": { shipped: false, trackingAdded: false },
+    "#1042": { shipped: false, trackingAdded: false },
+    "#1041": { shipped: true, trackingAdded: false },
+  });
+
+  const handleMarkShipped = (orderId: string) => {
+    setFulfillment((current) => ({
+      ...current,
+      [orderId]: { shipped: true, trackingAdded: current[orderId]?.trackingAdded ?? false },
+    }));
+  };
+
+  const handleAddTracking = (orderId: string) => {
+    setFulfillment((current) => ({
+      ...current,
+      [orderId]: { shipped: current[orderId]?.shipped ?? false, trackingAdded: true },
+    }));
+  };
 
   return (
     <DashboardLayout
@@ -42,7 +63,7 @@ export default function StudioOverview() {
       subtitle={`Here's what's happening with ${brand?.name ?? "your store"} today.`}
       actions={
         <>
-          <button className="btn ">📅 Apr 21, 2025 – Apr 27, 2025 ▾</button>
+          <button type="button" className="btn ">📅 Apr 21, 2025 – Apr 27, 2025 ▾</button>
           🔔
           <Link to="/" className="btn pri">View storefront ↗</Link>
         </>
@@ -142,7 +163,7 @@ export default function StudioOverview() {
           <section className="card ">
             <h3>
               Top products
-              <a href="#">View all →</a>
+              <Link to="/studio/products">View all →</Link>
             </h3>
             <div className="wrap">
               <table>
@@ -201,8 +222,12 @@ export default function StudioOverview() {
               Jordan Mitchell
               <span className="sub">📍 Austin, TX</span>
               <div className="acts">
-                <button className="btn pri">Mark shipped</button>
-                <button className="btn ">Add tracking</button>
+                <button type="button" className="btn pri" onClick={() => handleMarkShipped("#1043")} disabled={fulfillment["#1043"]?.shipped}>
+                  {fulfillment["#1043"]?.shipped ? "Shipped" : "Mark shipped"}
+                </button>
+                <button type="button" className="btn " onClick={() => handleAddTracking("#1043")} disabled={fulfillment["#1043"]?.trackingAdded}>
+                  {fulfillment["#1043"]?.trackingAdded ? "Tracking added" : "Add tracking"}
+                </button>
               </div>
             </div>
           </div>
@@ -216,8 +241,12 @@ export default function StudioOverview() {
               Taylor Brooks
               <span className="sub">📍 Seattle, WA</span>
               <div className="acts">
-                <button className="btn pri">Mark shipped</button>
-                <button className="btn ">Add tracking</button>
+                <button type="button" className="btn pri" onClick={() => handleMarkShipped("#1042")} disabled={fulfillment["#1042"]?.shipped}>
+                  {fulfillment["#1042"]?.shipped ? "Shipped" : "Mark shipped"}
+                </button>
+                <button type="button" className="btn " onClick={() => handleAddTracking("#1042")} disabled={fulfillment["#1042"]?.trackingAdded}>
+                  {fulfillment["#1042"]?.trackingAdded ? "Tracking added" : "Add tracking"}
+                </button>
               </div>
             </div>
           </div>
@@ -231,8 +260,12 @@ export default function StudioOverview() {
               Casey Rivera
               <span className="sub">📍 Denver, CO</span>
               <div className="acts">
-                <button className="btn pri">Mark shipped</button>
-                <button className="btn ">Add tracking</button>
+                <button type="button" className="btn pri" onClick={() => handleMarkShipped("#1041")} disabled={fulfillment["#1041"]?.shipped}>
+                  {fulfillment["#1041"]?.shipped ? "Shipped" : "Mark shipped"}
+                </button>
+                <button type="button" className="btn " onClick={() => handleAddTracking("#1041")} disabled={fulfillment["#1041"]?.trackingAdded}>
+                  {fulfillment["#1041"]?.trackingAdded ? "Tracking added" : "Add tracking"}
+                </button>
               </div>
             </div>
           </div>

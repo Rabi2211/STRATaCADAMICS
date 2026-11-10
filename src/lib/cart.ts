@@ -95,6 +95,22 @@ export function getCartSummary(items: CartEntry[] = readCart()) {
   };
 }
 
+export function getCheckoutSummary(items: CartEntry[] = readCart()) {
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const tax = Math.round(subtotal * 0.15);
+  const shipping = subtotal > 2000 ? 0 : 0;
+  const total = subtotal + tax + shipping;
+
+  return {
+    subtotal,
+    shipping,
+    tax,
+    total,
+    itemCount: items.length,
+    deliveryWindow: "3-5 business days",
+  };
+}
+
 export function buildOrderItemsFromCart(items: CartEntry[] = readCart()) {
   return items.map((item) => ({
     productId: item.id,
