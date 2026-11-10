@@ -147,7 +147,7 @@ export default function MarketBrands() {
           <section className="card ">
             <h3 />
             <div className="wrap">
-              <table>
+              <table className="brands-table">
                 <tbody>
                   <tr>
                     <th>Brand</th>

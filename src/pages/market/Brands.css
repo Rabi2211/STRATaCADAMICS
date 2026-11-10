@@ -21,6 +21,15 @@
   margin-top:8px;
 }
 
+/* Mobile list view for brands */
+.dash .brands-list {
+  display: none;
+}
+
+.dash .brands-table {
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   .dash .split {
     grid-template-columns:1fr;
@@ -47,11 +56,66 @@
   }
 
   .dash .wrap {
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: 70vh;
   }
 
-  .dash table {
-    min-width:540px;
+  .dash .brands-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .dash .brands-table thead {
+    display: none;
+  }
+
+  .dash .brands-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .dash .brands-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    border: none;
+    font-size: 14px;
+  }
+
+  .dash .brands-table td:before {
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    min-width: 80px;
+  }
+
+  .dash .brands-table td:nth-child(1):before {
+    content: "Brand";
+  }
+
+  .dash .brands-table td:nth-child(2):before {
+    content: "Category";
+  }
+
+  .dash .brands-table td:nth-child(3):before {
+    content: "Products";
+  }
+
+  .dash .brands-table td:nth-child(4):before {
+    content: "Sales";
+  }
+
+  .dash .brands-table td:nth-child(5):before {
+    content: "Status";
+  }
+
+  .dash .brands-table td:nth-child(6):before {
+    content: "Actions";
   }
 }

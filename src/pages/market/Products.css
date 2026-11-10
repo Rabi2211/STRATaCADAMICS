@@ -110,16 +110,82 @@
     font-size:16px;
   }
 
+  .dash .wrap {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: 70vh;
+  }
+
   .dash table {
-    min-width:0;
-    width:100%;
-    table-layout:fixed;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .dash table thead {
+    display: none;
+  }
+
+  .dash table tbody tr {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .dash table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    border: none;
+    font-size: 14px;
+  }
+
+  .dash table td:before {
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    min-width: 90px;
+  }
+
+  .dash table td:nth-child(1):before {
+    content: "Select";
+  }
+
+  .dash table td:nth-child(2):before {
+    content: "Product";
+  }
+
+  .dash table td:nth-child(3):before {
+    content: "Brand";
+  }
+
+  .dash table td:nth-child(4):before {
+    content: "SKU";
+  }
+
+  .dash table td:nth-child(5):before {
+    content: "Price";
+  }
+
+  .dash table td:nth-child(6):before {
+    content: "Available";
+  }
+
+  .dash table td:nth-child(7):before {
+    content: "Status";
+  }
+
+  .dash table td:nth-child(8):before {
+    content: "Action";
   }
 
   .dash td,
   .dash th {
     word-break:break-word;
-    padding:8px 6px;
+    padding:0;
   }
 
   .dash .pager {

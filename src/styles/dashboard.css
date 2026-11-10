@@ -295,7 +295,8 @@
 }
 
 .dash .wrap {
-  overflow-x:auto;
+  overflow: hidden;
+  width: 100%;
 }
 
 .dash table {
@@ -496,11 +497,12 @@
     min-width:0 !important;
   }
   .dash table {
-    min-width:540px;
+    width: 100%;
+    min-width: 0;
   }
   .dash .wrap {
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
+    overflow: hidden;
+    width: 100%;
   }
   .dash .row {
     flex-direction:column;
@@ -527,5 +529,40 @@
   }
   .dash .row.card {
     width:100%;
+  }
+}
+
+@media (max-width: 280px) {
+  .dash .main {
+    padding: 12px 10px;
+  }
+  .dash .card,
+  .dash .panel {
+    padding: 10px;
+  }
+  .dash .card h3,
+  .dash .panel h3 {
+    font-size: 14px;
+  }
+  .dash h1 {
+    font-size: 20px;
+  }
+  .dash .tools,
+  .dash .grid,
+  .dash .stack {
+    gap: 8px;
+  }
+  .dash table td {
+    padding: 8px 4px;
+    font-size: 13px;
+  }
+  .dash table tbody tr {
+    padding: 12px !important;
+    margin-bottom: 10px !important;
+  }
+  .dash .thumb {
+    width: 32px;
+    height: 32px;
+    margin-right: 6px;
   }
 }

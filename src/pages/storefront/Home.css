@@ -158,3 +158,81 @@
   font-weight: 600;
   padding: 2px 12px 8px;
 }
+
+/* Mobile responsive styles */
+@media (max-width: 560px) {
+  .sf .hero {
+    min-height: 50vh;
+    height: 50vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .sf .hero .display {
+    position: static;
+    font-size: clamp(24px, 5vw, 36px);
+    order: 1;
+    margin-bottom: 12px;
+  }
+
+  .sf .hero__shirt {
+    position: static;
+    transform: rotate(-10deg) !important;
+    width: min(200px, 60%);
+    aspect-ratio: 1;
+    margin-bottom: 12px;
+    order: 2;
+  }
+
+  .sf .hero__shirt span {
+    font-size: 16px;
+  }
+
+  .sf .hero__shirt strong {
+    font-size: 18px;
+  }
+
+  .sf .hero__btn {
+    position: static;
+    margin-bottom: 0;
+    order: 3;
+    width: auto;
+  }
+
+  .sf .promos {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px 4px 6px;
+  }
+
+  .sf .promo {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 380px) {
+  .sf .hero {
+    min-height: 45vh;
+    height: 45vh;
+  }
+
+  .sf .hero .display {
+    font-size: clamp(20px, 4vw, 28px);
+    margin-bottom: 8px;
+  }
+
+  .sf .hero__shirt {
+    width: min(160px, 55%);
+    margin-bottom: 8px;
+  }
+
+  .sf .hero__shirt span {
+    font-size: 12px;
+  }
+
+  .sf .hero__shirt strong {
+    font-size: 14px;
+  }
+}
