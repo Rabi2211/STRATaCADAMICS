@@ -10,6 +10,7 @@ const POLICY_LINKS: Record<string, string> = {
   "Terms & Conditions": "/terms",
   "Shipping": "/shipping",
   "Contact Details": "/contact",
+  "Blog": "/blog",
 };
 
 export default function StoreFooter() {

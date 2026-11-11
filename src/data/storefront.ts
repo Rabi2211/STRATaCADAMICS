@@ -51,5 +51,5 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   { title: "Customer Service", links: ["Track my order", "Request a return", "FAQ", "Refund Policy"] },
   { title: "Legal", links: ["Terms & Conditions", "Privacy Policy", "Cookie Statement", "Contact Details"] },
   { title: "Company", links: ["About", "Ambition", "Founders", "Brand Protection"] },
-  { title: "Credits", links: ["Models", "Photographer", "Brand Owner"] },
+  { title: "Credits", links: ["Models", "Photographer", "Brand Owner", "Blog"] },
 ];

@@ -1,0 +1,247 @@
+/* Storefront Blog Styles */
+
+.blog-container {
+  max-width: 1180px;
+  margin: 32px auto 80px;
+  padding: 0 20px;
+}
+
+.blog-header {
+  background: linear-gradient(135deg, #f6efe8 0%, #fff 100%);
+  border: 1px solid #e8dfd4;
+  border-radius: 24px;
+  padding: 28px;
+  margin-bottom: 40px;
+}
+
+.blog-header-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: #7d6d5d;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.blog-header h1 {
+  margin: 12px 0 8px;
+  font-size: clamp(2.2rem, 4vw, 3.25rem);
+  color: #1d1917;
+}
+
+.blog-header p {
+  margin: 0;
+  max-width: 700px;
+  color: #4b4541;
+  line-height: 1.7;
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.blog-card {
+  background: #f9f7f5;
+  border: 1px solid #e8dfd4;
+  border-radius: 12px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.blog-card:hover {
+  background: #f0e8dd;
+  border-color: #d9ccbf;
+  transform: translateY(-4px);
+}
+
+.blog-card-category {
+  display: inline-block;
+  background: #e8ddf4;
+  color: #7d6d5d;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  letter-spacing: 0.6px;
+}
+
+.blog-card h3 {
+  margin: 12px 0 8px;
+  color: #1d1917;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.blog-card-meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #7d6d5d;
+}
+
+/* Blog Post Article Styles */
+
+.blog-article {
+  background: #fff;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 900px;
+  margin: 32px auto;
+}
+
+.blog-article-header {
+  margin-bottom: 32px;
+}
+
+.blog-article-category {
+  display: inline-block;
+  background: #f0e8dd;
+  color: #7d6d5d;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.blog-article h1 {
+  margin: 12px 0 8px;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  color: #1d1917;
+}
+
+.blog-article-meta {
+  color: #9b8b7a;
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+
+.blog-article-content {
+  color: #4b4541;
+  line-height: 1.8;
+  font-size: 16px;
+}
+
+.blog-article-content h2 {
+  margin-top: 32px;
+  margin-bottom: 16px;
+  font-size: 24px;
+  color: #1d1917;
+}
+
+.blog-article-content h3 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-size: 20px;
+  color: #1d1917;
+}
+
+.blog-article-content p {
+  margin-bottom: 16px;
+  line-height: 1.8;
+}
+
+.blog-article-content ul,
+.blog-article-content ol {
+  margin-bottom: 16px;
+  padding-left: 24px;
+}
+
+.blog-article-content li {
+  margin-bottom: 8px;
+}
+
+.blog-back-button {
+  background: none;
+  border: none;
+  color: #9b8b7a;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 24px;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.blog-back-button:hover {
+  color: #7d6d5d;
+}
+
+.blog-related-section {
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid #e8dfd4;
+}
+
+.blog-related-section h3 {
+  margin: 0 0 20px;
+  color: #1d1917;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.blog-related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.blog-related-card {
+  background: #f9f7f5;
+  border: 1px solid #e8dfd4;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.blog-related-card:hover {
+  background: #f0e8dd;
+  border-color: #d9ccbf;
+}
+
+.blog-related-card-category {
+  font-size: 12px;
+  color: #9b8b7a;
+  text-transform: uppercase;
+}
+
+.blog-related-card h4 {
+  margin: 8px 0;
+  color: #1d1917;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.blog-related-card-meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #7d6d5d;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .blog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .blog-article {
+    padding: 24px;
+  }
+
+  .blog-article-content h2 {
+    font-size: 20px;
+  }
+
+  .blog-article-content h3 {
+    font-size: 18px;
+  }
+}
