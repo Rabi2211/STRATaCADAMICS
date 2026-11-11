@@ -9,7 +9,7 @@ const purchaseSeed = [
 ];
 
 export default function StudioPurchases() {
-  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState(purchaseSeed);
 

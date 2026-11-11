@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { fetchOrders, updateOrderStatus, type ApiOrder } from "../../lib/store-api";
-import { getVisibleOrders, type StudioOrderFilter } from "./studio-utils";
+import { getVisibleOrders, type StudioOrderFilter, type StudioOrderLike } from "./studio-utils";
 import "./Orders.css";
 
 export default function StudioOrders() {
@@ -49,20 +49,36 @@ export default function StudioOrders() {
   const totalOrders = orders.length;
   const pendingOrders = orders.filter((order) => order.status === "PENDING").length;
   const shippedOrders = orders.filter((order) => order.status === "SHIPPED").length;
-  const orderRows = useMemo(() => orders.map((order) => ({
-    id: order.id,
-    customer: order.user?.name ?? "Customer",
-    email: order.user?.email ?? "customer@example.com",
-    total: Number(order.total ?? 0),
-    items: order.items?.map((item) => `${item.quantity}× ${item.product?.name ?? "Product"}`).join(", ") || "Order",
-    status: order.status,
-    date: order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-ZA", { month: "short", day: "numeric", year: "numeric" }) : "No date",
-  })), [orders]);
+  const filteredOrderRows = useMemo(() => {
+    const visibleOrders: StudioOrderLike[] = orders.map((order) => ({
+      id: order.id,
+      status: order.status,
+      user: {
+        name: order.user?.name ?? "Customer",
+        email: order.user?.email ?? "customer@example.com",
+      },
+      items: (order.items ?? []).map((item) => ({
+        quantity: item.quantity ?? 1,
+        product: item.product ? { name: item.product.name ?? "Product" } : undefined,
+      })),
+      total: Number(order.total ?? 0),
+    }));
 
-  const filteredOrderRows = useMemo(
-    () => getVisibleOrders(orderRows as Array<{ id: string; status?: string; user?: { name?: string; email?: string }; items?: Array<{ quantity?: number; product?: { name?: string } }>; total?: number | string }>, activeFilter, searchQuery),
-    [activeFilter, orderRows, searchQuery],
-  );
+    return getVisibleOrders(visibleOrders, activeFilter, searchQuery).map((order) => {
+      const matchingOrder = orders.find((entry) => entry.id === order.id);
+      return {
+        id: order.id,
+        customer: order.user?.name ?? "Customer",
+        email: order.user?.email ?? "customer@example.com",
+        total: Number(order.total ?? 0),
+        items: order.items?.map((item) => `${item.quantity ?? 1}× ${item.product?.name ?? "Product"}`).join(", ") || "Order",
+        status: order.status ?? "PENDING",
+        date: matchingOrder?.createdAt
+          ? new Date(matchingOrder.createdAt).toLocaleDateString("en-ZA", { month: "short", day: "numeric", year: "numeric" })
+          : "No date",
+      };
+    });
+  }, [activeFilter, orders, searchQuery]);
 
   return (
     <DashboardLayout
