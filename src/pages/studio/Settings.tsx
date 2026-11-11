@@ -3,8 +3,20 @@ import DashboardLayout from "../../components/DashboardLayout";
 import { fetchBrands, type ApiBrand } from "../../lib/store-api";
 import "./Settings.css";
 
+const tabOptions = ["General", "Shipping", "Notifications", "Preorders", "Payments"] as const;
+type SettingsTab = typeof tabOptions[number];
+
 export default function StudioSettings() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [activeTab, setActiveTab] = useState<SettingsTab>("General");
+  const [saved, setSaved] = useState(false);
+  const [brandName, setBrandName] = useState("Your brand");
+  const [storeUrl, setStoreUrl] = useState("your-brand.strata.store");
+  const [contactEmail, setContactEmail] = useState("hello@brand.store");
+  const [description, setDescription] = useState("Independent essentials for modern living.");
+  const [shippingPolicy, setShippingPolicy] = useState("Free shipping on orders over R100.\nShipping takes 3–7 business days.");
+  const [expectedShipping, setExpectedShipping] = useState("May 22, 2025");
+  const [customerMessage, setCustomerMessage] = useState("Thanks for your support! Preorder items ship on the expected date above.");
 
   useEffect(() => {
     let active = true;
@@ -29,6 +41,17 @@ export default function StudioSettings() {
 
   const brand = brands[0];
 
+  useEffect(() => {
+    if (!brand) {
+      return;
+    }
+
+    setBrandName(brand.name || "Your brand");
+    setStoreUrl(`${(brand.name || "your-brand").toLowerCase().replace(/\s+/g, "-")}.strata.store`);
+    setContactEmail(`hello@${(brand.name || "brand").toLowerCase().replace(/\s+/g, "-")}.store`);
+    setDescription(brand.description ? String(brand.description) : "Independent essentials for modern living.");
+  }, [brand]);
+
   return (
     <DashboardLayout
       kind="studio"
@@ -45,11 +68,17 @@ export default function StudioSettings() {
       }
     >
       <div className="tabs">
-        <a href="#" className="on">General</a>
-        <a href="#">Shipping</a>
-        <a href="#">Notifications</a>
-        <a href="#">Preorders</a>
-        <a href="#">Payments</a>
+        {tabOptions.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className={activeTab === tab ? "on" : ""}
+            onClick={() => { setActiveTab(tab); setSaved(false); }}
+            style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, marginRight: 12 }}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
       <div className="grid g32">
         <div className="stack">
@@ -58,11 +87,11 @@ export default function StudioSettings() {
             <div className="grid g2">
               <div className="field">
                 <label>Brand name</label>
-                <input defaultValue={brand?.name ?? "Your brand"} />
+                <input value={brandName} onChange={(event) => setBrandName(event.target.value)} />
               </div>
               <div className="field">
                 <label>Store URL</label>
-                <input defaultValue={`${(brand?.name ?? "your-brand").toLowerCase().replace(/\s+/g, "-")}.strata.store`} />
+                <input value={storeUrl} onChange={(event) => setStoreUrl(event.target.value)} />
               </div>
             </div>
             <label>
@@ -79,11 +108,11 @@ export default function StudioSettings() {
             </div>
             <div className="field">
               <label>Contact email</label>
-              <input defaultValue={`hello@${(brand?.name ?? "brand").toLowerCase().replace(/\s+/g, "-")}.store`} />
+              <input value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} />
             </div>
             <div className="field">
               <label>Storefront description</label>
-              <textarea defaultValue={`Independent essentials for ${brand?.description?.toLowerCase() ?? "modern living"}. Curated pieces for a refined everyday wardrobe.`} />
+              <textarea value={description} onChange={(event) => setDescription(event.target.value)} />
             </div>
           </section>
           <section className="card ">
@@ -92,7 +121,7 @@ export default function StudioSettings() {
             <br />
             <div className="field">
               <label />
-              <textarea defaultValue={"Free shipping on orders over R100.\nShipping takes 3–7 business days."} />
+              <textarea value={shippingPolicy} onChange={(event) => setShippingPolicy(event.target.value)} />
             </div>
           </section>
         </div>
@@ -107,16 +136,23 @@ export default function StudioSettings() {
             <br />
             <div className="field">
               <label>Expected shipping timeframe</label>
-              <input defaultValue={"May 22, 2025"} />
+              <input value={expectedShipping} onChange={(event) => setExpectedShipping(event.target.value)} />
             </div>
             <div className="field">
               <label>Customer message</label>
-              <textarea defaultValue={"Thanks for your support! Preorder items ship on the expected date above. We'll keep you updated every step of the way."} />
+              <textarea value={customerMessage} onChange={(event) => setCustomerMessage(event.target.value)} />
             </div>
           </section>
           <section className="card ">
             <h3 />
-            <button className="btn pri full">Save changes</button>
+            <button
+              className="btn pri full"
+              type="button"
+              onClick={() => setSaved(true)}
+            >
+              {saved ? "Saved" : "Save changes"}
+            </button>
+            {saved && <p className="sub" style={{ marginTop: 8 }}>Store preferences updated successfully.</p>}
           </section>
         </div>
       </div>

@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
+import { buildInventoryCsv } from "./studio-utils";
 import "./Inventory.css";
 
 export default function StudioInventory() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [isAdjustingStock, setIsAdjustingStock] = useState(false);
+  const [stockDraft, setStockDraft] = useState<Record<string, number>>({});
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     let active = true;
@@ -30,9 +34,47 @@ export default function StudioInventory() {
   }, []);
 
   const brand = brands[0];
-  const brandRows = products.filter((product) => product.brandId === brand?.id);
+  const brandRows = useMemo(() => {
+    const filtered = products.filter((product) => product.brandId === brand?.id);
+    return [...filtered].sort((a, b) => sortDirection === "asc" ? a.available - b.available : b.available - a.available);
+  }, [brand?.id, products, sortDirection]);
   const totalUnits = products.reduce((sum, product) => sum + product.available, 0);
   const lowStockCount = products.filter((product) => product.available <= 25).length;
+
+  const handleAdjustStock = () => {
+    setIsAdjustingStock(true);
+    setStockDraft((current) => {
+      const next = { ...current };
+      for (const product of brandRows) {
+        next[product.id] = product.available;
+      }
+      return next;
+    });
+  };
+
+  const handleSaveStock = () => {
+    setProducts((current) => current.map((product) => ({
+      ...product,
+      available: stockDraft[product.id] ?? product.available,
+    })));
+    setIsAdjustingStock(false);
+  };
+
+  const handleExport = () => {
+    const csv = buildInventoryCsv(brandRows.map((product) => ({
+      Product: product.name,
+      SKU: product.sku,
+      Available: product.available,
+    })));
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "studio-inventory.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <DashboardLayout
@@ -41,8 +83,10 @@ export default function StudioInventory() {
       subtitle={`Track stock levels for ${brand?.name ?? "your brand"} across the shared store catalog.`}
       actions={
         <>
-          <button className="btn ">⬇ Export</button>
-          <button className="btn pri">Adjust stock</button>
+          <button className="btn " type="button" onClick={handleExport}>⬇ Export</button>
+          <button className="btn pri" type="button" onClick={isAdjustingStock ? handleSaveStock : handleAdjustStock}>
+            {isAdjustingStock ? "Save stock" : "Adjust stock"}
+          </button>
         </>
       }
     >
@@ -54,7 +98,14 @@ export default function StudioInventory() {
         <select className="search">
           <option>All status</option>
         </select>
-        <button className="btn ">⚲</button>
+        <button
+          className="btn "
+          type="button"
+          onClick={() => setSortDirection((current) => (current === "asc" ? "desc" : "asc"))}
+          aria-label="Toggle inventory sort direction"
+        >
+          ⚲ {sortDirection === "asc" ? "Low to high" : "High to low"}
+        </button>
       </div>
       <div className="grid g4">
         <div className="card stat">
@@ -117,7 +168,23 @@ export default function StudioInventory() {
                     {product.name}
                     <span className="sub">{product.sku}</span>
                   </td>
-                  <td>{product.available}</td>
+                  <td>
+                    {isAdjustingStock ? (
+                      <input
+                        type="number"
+                        min={0}
+                        value={stockDraft[product.id] ?? product.available}
+                        onChange={(event) => setStockDraft((current) => ({
+                          ...current,
+                          [product.id]: Number(event.target.value) || 0,
+                        }))}
+                        aria-label={`Adjust stock for ${product.name}`}
+                        style={{ width: 72 }}
+                      />
+                    ) : (
+                      product.available
+                    )}
+                  </td>
                   <td>{Math.max(2, Math.round(product.available * 0.08))}</td>
                   <td>{Math.max(0, Math.round(product.available * 0.1))}</td>
                   <td>
@@ -134,7 +201,7 @@ export default function StudioInventory() {
         </div>
         <div className="pager">
           <span>Showing 1–{brandRows.length} of {brandRows.length} products</span>
-          <button className="btn pri">Save changes</button>
+          <button className="btn pri" type="button" onClick={handleSaveStock}>Save changes</button>
         </div>
       </section>
     </DashboardLayout>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
 import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Analytics.css";
@@ -6,6 +7,7 @@ import "./Analytics.css";
 export default function StudioAnalytics() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [dateRange, setDateRange] = useState<"7D" | "30D">("7D");
 
   useEffect(() => {
     let active = true;
@@ -27,9 +29,10 @@ export default function StudioAnalytics() {
     };
   }, []);
 
-  const soldRevenue = products.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
-  const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
-  const productViews = products.reduce((sum, product) => sum + Math.max(1200, Math.round(product.available * 38)), 0);
+  const multiplier = dateRange === "7D" ? 1 : 2.8;
+  const soldRevenue = products.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0) * multiplier;
+  const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0) * Math.round(multiplier);
+  const productViews = products.reduce((sum, product) => sum + Math.max(1200, Math.round(product.available * 38)), 0) * Math.round(multiplier);
   const conversionRate = totalOrders / Math.max(1, productViews) * 100;
 
   return (
@@ -39,7 +42,13 @@ export default function StudioAnalytics() {
       subtitle={"Track your store performance, understand your audience, and grow your brand."}
       actions={
         <>
-          <button className="btn ">📅 Apr 21, 2025 – Apr 27, 2025 ▾</button>
+          <button
+            type="button"
+            className="btn "
+            onClick={() => setDateRange((current) => (current === "7D" ? "30D" : "7D"))}
+          >
+            📅 {dateRange === "7D" ? "Apr 21, 2025 – Apr 27, 2025" : "Apr 1, 2025 – Apr 30, 2025"} ▾
+          </button>
         </>
       }
     >
@@ -111,7 +120,7 @@ export default function StudioAnalytics() {
         <section className="card ">
           <h3>
             Top products
-            <a href="#">View all →</a>
+            <Link to="/studio/products">View all →</Link>
           </h3>
           <div className="wrap">
             <table>

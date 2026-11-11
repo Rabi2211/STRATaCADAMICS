@@ -12,6 +12,8 @@ const SECTION_DATA: Record<string, { title: string; categories: string[] }> = {
 };
 
 function ProductCard({ product }: { product: StoreProduct }) {
+  const [isAdded, setIsAdded] = useState(false);
+
   const handleAddToCart = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -22,6 +24,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
       brandId: product.brandId,
       imageClass: product.imageClass,
     }, 1);
+    setIsAdded(true);
   };
 
   return (
@@ -34,7 +37,7 @@ function ProductCard({ product }: { product: StoreProduct }) {
       <small>SKU: {product.sku}</small>
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
         <Link to={`/product/${product.id}`} className="btn btn--small" style={{ display: "inline-block", textDecoration: "none" }}>View details</Link>
-        <button type="button" className="btn btn--small" onClick={handleAddToCart}>Add to cart</button>
+        <button type="button" className="btn btn--small" onClick={handleAddToCart}>{isAdded ? "Added to cart" : "Add to cart"}</button>
       </div>
     </div>
   );

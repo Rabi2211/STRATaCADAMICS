@@ -29,6 +29,7 @@ const ROUTES = [
   { path: "/about", label: "Storefront · About", Component: lazy(() => import("./pages/storefront/TrustPage")) },
   { path: "/help", label: "Storefront · Help centre", Component: lazy(() => import("./pages/storefront/HelpCenter")) },
   { path: "/faq", label: "Storefront · FAQ", Component: lazy(() => import("./pages/storefront/HelpCenter")) },
+  { path: "/blog", label: "Storefront · Blog", Component: lazy(() => import("./pages/market/Blog")) },
   { path: "/contact", label: "Storefront · Contact", Component: lazy(() => import("./pages/storefront/TrustPage")) },
   { path: "/shipping", label: "Storefront · Shipping", Component: lazy(() => import("./pages/storefront/TrustPage")) },
   { path: "/returns", label: "Storefront · Returns", Component: lazy(() => import("./pages/storefront/TrustPage")) },

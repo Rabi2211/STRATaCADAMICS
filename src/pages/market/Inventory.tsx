@@ -12,6 +12,8 @@ type InventoryRow = Omit<ReturnType<typeof mapApiProduct>, "status"> & {
 export default function MarketInventory() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [showAdjuster, setShowAdjuster] = useState(false);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -49,6 +51,39 @@ export default function MarketInventory() {
   const totalUnits = inventoryRows.reduce((sum, product) => sum + product.available, 0);
   const lowStockCount = lowStock.length;
 
+  const handleAdjustStock = (productId: string, delta: number) => {
+    setProducts((current) => current.map((product) =>
+      product.id === productId
+        ? { ...product, available: Math.max(0, product.available + delta) }
+        : product,
+    ));
+    setNotice("Inventory updated.");
+  };
+
+  const handleExportCsv = () => {
+    const header = ["Product", "Brand", "SKU", "Available", "Status"];
+    const rows = inventoryRows.map((product) => [
+      product.name,
+      product.brand?.name ?? "Store brand",
+      product.sku,
+      String(product.available),
+      product.status,
+    ]);
+
+    const csv = [header, ...rows]
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "inventory.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+    setNotice("Inventory exported as CSV.");
+  };
+
   return (
     <DashboardLayout
       kind="market"
@@ -66,7 +101,7 @@ export default function MarketInventory() {
           <select className="search">
             <option>All stock status</option>
           </select>
-          <button className="btn pri">Export ⬆</button>
+          <button type="button" className="btn pri" onClick={handleExportCsv}>Export ⬆</button>
         </>
       }
     >
@@ -136,7 +171,11 @@ export default function MarketInventory() {
                       <span className={`pill ${product.status === "Low stock" ? "orange" : "green"}`}>{product.status}</span>
                     </td>
                     <td>
-                      <span className="qty">− {product.available} +</span>
+                      <span className="qty">
+                        <button type="button" className="btn btn--small" onClick={() => handleAdjustStock(product.id, -1)} aria-label={`Decrease stock for ${product.name}`}>−</button>
+                        <span style={{ padding: "0 8px" }}>{product.available}</span>
+                        <button type="button" className="btn btn--small" onClick={() => handleAdjustStock(product.id, 1)} aria-label={`Increase stock for ${product.name}`}>+</button>
+                      </span>
                     </td>
                     <td>⋮</td>
                   </tr>
@@ -160,8 +199,25 @@ export default function MarketInventory() {
               </div>
             ))}
           </section>
-          <button className="btn full">Adjust stock</button>
-          <button className="btn pri full">✓ Save changes</button>
+          <button type="button" className="btn full" onClick={() => setShowAdjuster((current) => !current)}>{showAdjuster ? "Hide stock controls" : "Adjust stock"}</button>
+          {showAdjuster && (
+            <div className="card" style={{ padding: "12px" }}>
+              {inventoryRows.map((product) => (
+                <div key={product.id} className="row" style={{ alignItems: "center" }}>
+                  <span>
+                    <b>{product.name}</b>
+                    <span className="sub">{product.available} units</span>
+                  </span>
+                  <div>
+                    <button type="button" className="btn btn--small" onClick={() => handleAdjustStock(product.id, -1)}>−1</button>
+                    <button type="button" className="btn btn--small" onClick={() => handleAdjustStock(product.id, 1)}>+1</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" className="btn pri full" onClick={() => setNotice("Changes saved.")}>✓ Save changes</button>
+          {notice && <p className="sub">{notice}</p>}
         </div>
       </div>
     </DashboardLayout>

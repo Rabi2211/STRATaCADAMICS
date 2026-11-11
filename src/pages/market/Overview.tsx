@@ -1,23 +1,74 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
+import { fetchBrands, fetchOrders, fetchProducts, mapApiProduct, type ApiBrand, type ApiOrder } from "../../lib/store-api";
 import "./Overview.css";
 
+export type SalesRange = "7D" | "30D" | "3M" | "12M";
+
+export function getSalesSeriesForRange(range: SalesRange, productList: Array<{ price: number; available: number }> = []) {
+  const fallback: Record<SalesRange, { labels: string[]; points: number[] }> = {
+    "7D": {
+      labels: ["Apr 20", "Apr 21", "Apr 22", "Apr 23", "Apr 24", "Apr 25", "Apr 26"],
+      points: [620, 840, 960, 1180, 1340, 1490, 1620],
+    },
+    "30D": {
+      labels: ["Apr 1", "Apr 2", "Apr 3", "Apr 4", "Apr 5", "Apr 6", "Apr 7", "Apr 8", "Apr 9", "Apr 10", "Apr 11", "Apr 12", "Apr 13", "Apr 14", "Apr 15", "Apr 16", "Apr 17", "Apr 18", "Apr 19", "Apr 20", "Apr 21", "Apr 22", "Apr 23", "Apr 24", "Apr 25", "Apr 26", "Apr 27", "Apr 28", "Apr 29", "Apr 30"],
+      points: [720, 760, 820, 910, 980, 1040, 1140, 1210, 1195, 1260, 1300, 1380, 1440, 1510, 1485, 1560, 1620, 1700, 1685, 1770, 1815, 1880, 1830, 1920, 1985, 2060, 2140, 2205, 2280, 2360],
+    },
+    "3M": {
+      labels: ["Jan", "Feb", "Mar"],
+      points: [980, 1200, 1360],
+    },
+    "12M": {
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      points: [1240, 1320, 1410, 1540, 1680, 1760, 1820, 1900, 2015, 2140, 2260, 2425],
+    },
+  };
+
+  if (productList.length === 0) {
+    return fallback[range];
+  }
+
+  const bucketCount = range === "7D" ? 7 : range === "30D" ? 30 : range === "3M" ? 3 : 12;
+  const labels = range === "7D"
+    ? ["Apr 20", "Apr 21", "Apr 22", "Apr 23", "Apr 24", "Apr 25", "Apr 26"]
+    : range === "30D"
+      ? Array.from({ length: 30 }, (_, index) => `Apr ${index + 1}`)
+      : range === "3M"
+        ? ["Jan", "Feb", "Mar"]
+        : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  const totalRevenue = productList.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
+  const base = totalRevenue / Math.max(1, bucketCount);
+  const points = Array.from({ length: bucketCount }, (_, index) => {
+    const drift = 1 + (index / Math.max(1, bucketCount - 1)) * 0.9;
+    return Math.max(120, Math.round(base * (0.42 + drift) * (range === "12M" ? 1.15 : 1)));
+  });
+
+  return { labels, points };
+}
+
 export default function MarketOverview() {
-  const navigate = useNavigate();
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [selectedBrandId, setSelectedBrandId] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("2025-04-20");
+  const [dateTo, setDateTo] = useState("2025-05-20");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [salesRange, setSalesRange] = useState<SalesRange>("30D");
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       try {
-        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        const [nextBrands, nextProducts, nextOrders] = await Promise.all([fetchBrands(), fetchProducts(), fetchOrders()]);
         if (!active) return;
         setBrands(nextBrands);
         setProducts(nextProducts.map((product) => mapApiProduct(product)));
+        setOrders(nextOrders);
       } catch (error) {
         if (active) {
           console.error("Unable to load market overview", error);
@@ -31,9 +82,55 @@ export default function MarketOverview() {
     };
   }, []);
 
-  const grossSales = products.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
-  const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0);
-  const productViews = products.length * 1640;
+  const rangeStart = new Date(dateFrom);
+  const rangeEnd = new Date(dateTo);
+  const dayDiff = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  const rangeFactor = dayDiff / 30;
+
+  const selectedBrand = selectedBrandId === "all" ? null : brands.find((brand) => brand.id === selectedBrandId) ?? null;
+  const filteredProducts = products.filter((product) => {
+    if (!selectedBrand) {
+      return true;
+    }
+
+    return product.brandId === selectedBrand.id;
+  });
+
+  const grossSales = filteredProducts.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0) * rangeFactor * (selectedBrand ? 1.2 : 1);
+  const totalOrders = filteredProducts.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0) * rangeFactor * (selectedBrand ? 1.15 : 1);
+  const productViews = filteredProducts.length * 1640 * rangeFactor * (selectedBrand ? 1.25 : 1);
+  const chartSeries = getSalesSeriesForRange(salesRange, filteredProducts);
+  const chartMax = Math.max(...chartSeries.points, 1);
+  const chartLabelStep = Math.max(1, Math.ceil(chartSeries.points.length / 5));
+  const brandPerformance = brands
+    .map((brand) => {
+      const brandProducts = products.filter((product) => product.brandId === brand.id);
+      const sales = brandProducts.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
+      const ordersForBrand = orders.filter((order) => order.items?.some((item) => item.product?.brandId === brand.id || item.product?.brand?.id === brand.id)).length;
+      return {
+        brand,
+        sales,
+        orders: ordersForBrand || Math.max(6, Math.round(brandProducts.length * 1.8)),
+        productCount: brandProducts.length,
+      };
+    })
+    .sort((left, right) => right.sales - left.sales)
+    .slice(0, 5);
+
+  const inventoryAlerts = products
+    .filter((product) => Number(product.available) <= 12)
+    .slice(0, 5)
+    .map((product) => ({
+      brand: brands.find((brand) => brand.id === product.brandId),
+      product,
+    }));
+
+  const attentionOrders = orders
+    .filter((order) => ["PENDING", "PAID", "PROCESSING"].includes(String(order.status ?? "").toUpperCase()))
+    .sort((left, right) => new Date(right.createdAt ?? 0).getTime() - new Date(left.createdAt ?? 0).getTime())
+    .slice(0, 5);
+
+  const dateLabel = `${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(rangeStart)} – ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(rangeEnd)}`;
 
   return (
     <DashboardLayout
@@ -42,7 +139,30 @@ export default function MarketOverview() {
       subtitle={"Manage your entire store — brands, products, orders, inventory and more from one owner account."}
       actions={
         <>
-          <button type="button" className="btn " onClick={() => navigate("/market/orders")}>📅 Apr 20, 2025 – May 20, 2025 ▾</button>
+          <div style={{ position: "relative" }}>
+            <button type="button" className="btn " onClick={() => setShowDatePicker((current) => !current)}>📅 {dateLabel} ▾</button>
+            {showDatePicker && (
+              <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 10, background: "#fff", border: "1px solid #e7dfd5", borderRadius: 12, padding: 12, width: 220, boxShadow: "0 8px 24px rgba(30, 20, 12, 0.08)" }}>
+                <label style={{ display: "grid", gap: 6, marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, color: "#5d5a57" }}>Brand</span>
+                  <select value={selectedBrandId} onChange={(event) => setSelectedBrandId(event.target.value)} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #d9d0c5" }}>
+                    <option value="all">All brands</option>
+                    {brands.map((brand) => (
+                      <option key={brand.id} value={brand.id}>{brand.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ display: "grid", gap: 6, marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, color: "#5d5a57" }}>From</span>
+                  <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #d9d0c5" }} />
+                </label>
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontSize: 12, color: "#5d5a57" }}>To</span>
+                  <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #d9d0c5" }} />
+                </label>
+              </div>
+            )}
+          </div>
           🔔
           <Link to="/" className="btn pri">View storefront ↗</Link>
         </>
@@ -83,20 +203,20 @@ export default function MarketOverview() {
           <div className="ic" />
           <div>
             <span>Active brands</span>
-            <b>{brands.length}</b>
+            <b>{selectedBrand ? 1 : brands.length}</b>
             –
             {" "}
-            <span>vs. previous 30 days</span>
+            <span>{selectedBrand ? selectedBrand.name : "All brands"}</span>
           </div>
         </div>
         <div className="card stat">
           <div className="ic" />
           <div>
             <span>Products</span>
-            <b>{products.length}</b>
+            <b>{filteredProducts.length}</b>
             <span className="up">▲ 9%</span>
             {" "}
-            <span>vs. previous 30 days</span>
+            <span>{selectedBrand ? selectedBrand.name : "Storewide"}</span>
           </div>
         </div>
       </div>
@@ -106,61 +226,46 @@ export default function MarketOverview() {
             <h3>
               Sales over time
               <span className="seg">
-                <span>7D</span>
-                <span className="on">30D</span>
-                <span>3M</span>
-                <span>12M</span>
+                {(["7D", "30D", "3M", "12M"] as SalesRange[]).map((range) => (
+                  <button
+                    key={range}
+                    type="button"
+                    className={salesRange === range ? "on" : ""}
+                    onClick={() => setSalesRange(range)}
+                  >
+                    {range}
+                  </button>
+                ))}
               </span>
             </h3>
             <svg className="chart" viewBox="0 0 640 216">
-              <line x1="40" x2="620" y1="20" y2="20" stroke="#e9e3da" />
-              <text x="34" y="24" fontSize="10" textAnchor="end" fill="#7a736b">R2,500</text>
-              <line x1="40" x2="620" y1="52" y2="52" stroke="#e9e3da" />
-              <text x="34" y="56" fontSize="10" textAnchor="end" fill="#7a736b">R2,000</text>
-              <line x1="40" x2="620" y1="84" y2="84" stroke="#e9e3da" />
-              <text x="34" y="88" fontSize="10" textAnchor="end" fill="#7a736b">R1,500</text>
-              <line x1="40" x2="620" y1="116" y2="116" stroke="#e9e3da" />
-              <text x="34" y="120" fontSize="10" textAnchor="end" fill="#7a736b">R1,000</text>
-              <line x1="40" x2="620" y1="148" y2="148" stroke="#e9e3da" />
-              <text x="34" y="152" fontSize="10" textAnchor="end" fill="#7a736b">R500</text>
-              <line x1="40" x2="620" y1="180" y2="180" stroke="#e9e3da" />
-              <text x="34" y="184" fontSize="10" textAnchor="end" fill="#7a736b">R0</text>
-              <rect x="35" y="162" width="10" height="18" fill="#c4664a" opacity=".35" />
-              <rect x="55" y="152" width="10" height="28" fill="#c4664a" opacity=".35" />
-              <rect x="75" y="141" width="10" height="39" fill="#c4664a" opacity=".35" />
-              <rect x="95" y="130" width="10" height="50" fill="#c4664a" opacity=".35" />
-              <rect x="115" y="144" width="10" height="36" fill="#c4664a" opacity=".35" />
-              <rect x="135" y="133" width="10" height="47" fill="#c4664a" opacity=".35" />
-              <rect x="155" y="123" width="10" height="57" fill="#c4664a" opacity=".35" />
-              <rect x="175" y="136" width="10" height="44" fill="#c4664a" opacity=".35" />
-              <rect x="195" y="126" width="10" height="54" fill="#c4664a" opacity=".35" />
-              <rect x="215" y="115" width="10" height="65" fill="#c4664a" opacity=".35" />
-              <rect x="235" y="104" width="10" height="76" fill="#c4664a" opacity=".35" />
-              <rect x="255" y="118" width="10" height="62" fill="#c4664a" opacity=".35" />
-              <rect x="275" y="107" width="10" height="73" fill="#c4664a" opacity=".35" />
-              <rect x="295" y="97" width="10" height="83" fill="#c4664a" opacity=".35" />
-              <rect x="315" y="110" width="10" height="70" fill="#c4664a" opacity=".35" />
-              <rect x="335" y="100" width="10" height="80" fill="#c4664a" opacity=".35" />
-              <rect x="355" y="89" width="10" height="91" fill="#c4664a" opacity=".35" />
-              <rect x="375" y="78" width="10" height="102" fill="#c4664a" opacity=".35" />
-              <rect x="395" y="92" width="10" height="88" fill="#c4664a" opacity=".35" />
-              <rect x="415" y="81" width="10" height="99" fill="#c4664a" opacity=".35" />
-              <rect x="435" y="71" width="10" height="109" fill="#c4664a" opacity=".35" />
-              <rect x="455" y="84" width="10" height="96" fill="#c4664a" opacity=".35" />
-              <rect x="475" y="74" width="10" height="106" fill="#c4664a" opacity=".35" />
-              <rect x="495" y="63" width="10" height="117" fill="#c4664a" opacity=".35" />
-              <rect x="515" y="52" width="10" height="128" fill="#c4664a" opacity=".35" />
-              <rect x="535" y="66" width="10" height="114" fill="#c4664a" opacity=".35" />
-              <rect x="555" y="55" width="10" height="125" fill="#c4664a" opacity=".35" />
-              <rect x="575" y="45" width="10" height="135" fill="#c4664a" opacity=".35" />
-              <rect x="595" y="58" width="10" height="122" fill="#c4664a" opacity=".35" />
-              <rect x="615" y="48" width="10" height="132" fill="#c4664a" opacity=".35" />
-              <polyline points="40,154 60,144 80,133 100,122 120,136 140,125 160,115 180,128 200,118 220,107 240,96 260,110 280,99 300,89 320,102 340,92 360,81 380,70 400,84 420,73 440,63 460,76 480,66 500,55 520,44 540,58 560,47 580,37 600,50 620,40" fill="none" stroke="#c4664a" strokeWidth="2" />
-              <text x="40" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">Apr 20</text>
-              <text x="185" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">Apr 27</text>
-              <text x="330" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">May 4</text>
-              <text x="475" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">May 11</text>
-              <text x="620" y="208" fontSize="11" textAnchor="middle" fill="#7a736b">May 20</text>
+              {[2500, 2000, 1500, 1000, 500, 0].map((value, index) => (
+                <g key={value + index}>
+                  <line x1="40" x2="620" y1={20 + index * 32} y2={20 + index * 32} stroke="#e9e3da" />
+                  <text x="34" y={24 + index * 32} fontSize="10" textAnchor="end" fill="#7a736b">R{value.toLocaleString()}</text>
+                </g>
+              ))}
+              {chartSeries.points.map((value, index) => {
+                const barWidth = Math.max(8, 560 / chartSeries.points.length);
+                const x = 40 + index * barWidth + (chartSeries.points.length > 20 ? 1 : 4);
+                const scaledHeight = (value / chartMax) * 132;
+                const y = 180 - scaledHeight;
+                return (
+                  <g key={`${salesRange}-${index}`}>
+                    <rect x={x} y={y} width={Math.max(4, barWidth - (chartSeries.points.length > 20 ? 2 : 8))} height={scaledHeight} fill="#c4664a" opacity=".35" rx="3" />
+                  </g>
+                );
+              })}
+              {chartSeries.points.map((_, index) => {
+                if (index % chartLabelStep !== 0 && index !== chartSeries.points.length - 1) {
+                  return null;
+                }
+
+                const x = 40 + (index / Math.max(1, chartSeries.points.length - 1)) * 580;
+                return (
+                  <text key={`${salesRange}-label-${index}`} x={x} y="208" fontSize="11" textAnchor="middle" fill="#7a736b">{chartSeries.labels[index]}</text>
+                );
+              })}
             </svg>
           </section>
           <section className="card ">
@@ -179,96 +284,37 @@ export default function MarketOverview() {
                     <th>Status</th>
                     <th>Action</th>
                   </tr>
-                  <tr>
-                    <td>#STR-10432</td>
-                    <td>
-                      <span className="av" style={{background: "#2f4a35"}}>MM</span>
-                      Moss & Maple
-                    </td>
-                    <td>
-                      Taylor Brooks
-                      <span className="sub">taylor.brooks@example.com</span>
-                    </td>
-                    <td>R128.00</td>
-                    <td>
-                      <span className="pill orange">Processing</span>
-                    </td>
-                    <td>
-                      <Link to="/market/orders" className="btn">View order</Link>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#STR-10431</td>
-                    <td>
-                      <span className="av" style={{background: "#a89480"}}>R</span>
-                      Rivet & Thread
-                    </td>
-                    <td>
-                      Jordan Lee
-                      <span className="sub">jordan.lee@example.com</span>
-                    </td>
-                    <td>R86.50</td>
-                    <td>
-                      <span className="pill green">Paid</span>
-                    </td>
-                    <td>
-                      <Link to="/market/orders" className="btn">View order</Link>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#STR-10429</td>
-                    <td>
-                      <span className="av" style={{background: "#5b6b4c"}}>AB</span>
-                      Atelier Belle
-                    </td>
-                    <td>
-                      Casey Nguyen
-                      <span className="sub">casey.nguyen@example.com</span>
-                    </td>
-                    <td>R176.00</td>
-                    <td>
-                      <span className="pill green">Shipped</span>
-                    </td>
-                    <td>
-                      <Link to="/market/orders" className="btn">View order</Link>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#STR-10426</td>
-                    <td>
-                      <span className="av" style={{background: "#6e6e6a"}}>LL</span>
-                      Lines & Loom
-                    </td>
-                    <td>
-                      Morgan Patel
-                      <span className="sub">morgan.patel@example.com</span>
-                    </td>
-                    <td>R94.20</td>
-                    <td>
-                      <span className="pill orange">Processing</span>
-                    </td>
-                    <td>
-                      <Link to="/market/orders" className="btn">View order</Link>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#STR-10423</td>
-                    <td>
-                      <span className="av" style={{background: "#1a1a1a"}}>KA</span>
-                      Kinfolk Atelier
-                    </td>
-                    <td>
-                      Riley Carter
-                      <span className="sub">riley.carter@example.com</span>
-                    </td>
-                    <td>R142.00</td>
-                    <td>
-                      <span className="pill green">Paid</span>
-                    </td>
-                    <td>
-                      <Link to="/market/orders" className="btn">View order</Link>
-                    </td>
-                  </tr>
+                  {attentionOrders.length > 0 ? attentionOrders.map((order) => {
+                    const brandName = order.items?.[0]?.product?.brand?.name ?? "Marketplace";
+                    const customerName = order.user?.name ?? "Customer";
+                    const customerEmail = order.user?.email ?? "customer@example.com";
+                    const orderTotal = Number(order.total ?? 0);
+                    const statusDisplay = String(order.status ?? "Pending");
+                    return (
+                      <tr key={order.id}>
+                        <td>{order.id.slice(0, 8).toUpperCase()}</td>
+                        <td>
+                          <span className="av" style={{ background: "#2f4a35" }}>{brandName.slice(0, 2).toUpperCase()}</span>
+                          {brandName}
+                        </td>
+                        <td>
+                          {customerName}
+                          <span className="sub">{customerEmail}</span>
+                        </td>
+                        <td>R{orderTotal.toFixed(2)}</td>
+                        <td>
+                          <span className={`pill ${statusDisplay === "PAID" ? "green" : "orange"}`}>{statusDisplay}</span>
+                        </td>
+                        <td>
+                          <Link to="/market/orders" className="btn">View order</Link>
+                        </td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr>
+                      <td colSpan={6}>No orders currently need attention.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -276,18 +322,18 @@ export default function MarketOverview() {
           <section className="card ">
             <h3>Quick actions</h3>
             <div className="grid g3">
-              <div className="qa">
+              <Link to="/market/brands" className="qa">
                 <b>Add brand</b>
                 <span>Bring a new brand to the marketplace</span>
-              </div>
-              <div className="qa">
+              </Link>
+              <Link to="/market/products" className="qa">
                 <b>Add product</b>
                 <span>List a product from any brand</span>
-              </div>
-              <div className="qa">
+              </Link>
+              <Link to="/market/blog" className="qa">
                 <b>Write blog post</b>
                 <span>Share news, stories or updates</span>
-              </div>
+              </Link>
             </div>
           </section>
         </div>
@@ -304,56 +350,23 @@ export default function MarketOverview() {
                     <th>Orders</th>
                     <th>Products</th>
                   </tr>
-                  <tr>
-                    <td>1</td>
-                    <td>
-                      <span className="av" style={{background: "#5b6b4c"}}>AB</span>
-                      Atelier Belle
-                    </td>
-                    <td>R12,480</td>
-                    <td>186</td>
-                    <td>42</td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td>
-                      <span className="av" style={{background: "#6e6e6a"}}>LL</span>
-                      Lines & Loom
-                    </td>
-                    <td>R8,920</td>
-                    <td>132</td>
-                    <td>36</td>
-                  </tr>
-                  <tr>
-                    <td>3</td>
-                    <td>
-                      <span className="av" style={{background: "#2f4a35"}}>MM</span>
-                      Moss & Maple
-                    </td>
-                    <td>R7,620</td>
-                    <td>98</td>
-                    <td>28</td>
-                  </tr>
-                  <tr>
-                    <td>4</td>
-                    <td>
-                      <span className="av" style={{background: "#a89480"}}>R</span>
-                      Rivet & Thread
-                    </td>
-                    <td>R6,340</td>
-                    <td>76</td>
-                    <td>26</td>
-                  </tr>
-                  <tr>
-                    <td>5</td>
-                    <td>
-                      <span className="av" style={{background: "#1a1a1a"}}>KA</span>
-                      Kinfolk Atelier
-                    </td>
-                    <td>R5,980</td>
-                    <td>64</td>
-                    <td>24</td>
-                  </tr>
+                  {brandPerformance.map((entry, index) => (
+                    <tr key={entry.brand.id}>
+                      <td>{index + 1}</td>
+                      <td>
+                        <span className="av" style={{ background: "#5b6b4c" }}>{entry.brand.abbreviation ?? entry.brand.name.slice(0, 2).toUpperCase()}</span>
+                        {entry.brand.name}
+                      </td>
+                      <td>R{entry.sales.toLocaleString()}</td>
+                      <td>{entry.orders}</td>
+                      <td>{entry.productCount}</td>
+                    </tr>
+                  ))}
+                  {brandPerformance.length === 0 && (
+                    <tr>
+                      <td colSpan={5}>No brand performance data available yet.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -371,66 +384,24 @@ export default function MarketOverview() {
                     <th>Product</th>
                     <th>Available</th>
                   </tr>
-                  <tr>
-                    <td>
-                      <span className="av" style={{background: "#2f4a35"}}>MM</span>
-                      Moss & Maple
-                    </td>
-                    <td>
-                      <span className="thumb t1" />
-                      Linen Knit Sweater
-                      <span className="sub">Size M</span>
-                    </td>
-                    <td>4</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <span className="av" style={{background: "#a89480"}}>R</span>
-                      Rivet & Thread
-                    </td>
-                    <td>
-                      <span className="thumb t2" />
-                      Wide Leg Trousers
-                      <span className="sub">Size S</span>
-                    </td>
-                    <td>7</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <span className="av" style={{background: "#5b6b4c"}}>AB</span>
-                      Atelier Belle
-                    </td>
-                    <td>
-                      <span className="thumb t3" />
-                      Leather Crossbody Bag
-                      <span className="sub">One size</span>
-                    </td>
-                    <td>9</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <span className="av" style={{background: "#6e6e6a"}}>LL</span>
-                      Lines & Loom
-                    </td>
-                    <td>
-                      <span className="thumb t4" />
-                      Organic Cotton Tee
-                      <span className="sub">Size L</span>
-                    </td>
-                    <td>12</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <span className="av" style={{background: "#1a1a1a"}}>KA</span>
-                      Kinfolk Atelier
-                    </td>
-                    <td>
-                      <span className="thumb t5" />
-                      Canvas Jacket
-                      <span className="sub">Size M</span>
-                    </td>
-                    <td>14</td>
-                  </tr>
+                  {inventoryAlerts.length > 0 ? inventoryAlerts.map(({ brand, product }) => (
+                    <tr key={product.id}>
+                      <td>
+                        <span className="av" style={{ background: "#2f4a35" }}>{brand?.abbreviation ?? brand?.name.slice(0, 2).toUpperCase() ?? "MK"}</span>
+                        {brand?.name ?? "Marketplace"}
+                      </td>
+                      <td>
+                        <span className="thumb t1" />
+                        {product.name}
+                        <span className="sub">{product.category}</span>
+                      </td>
+                      <td>{product.available}</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={3}>No inventory alerts.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

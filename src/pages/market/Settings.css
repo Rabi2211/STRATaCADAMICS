@@ -4,21 +4,30 @@
   display:inline-block;
   width:34px;
   height:19px;
+  border:0;
   border-radius:99px;
-  background:var(--acc);
+  background:var(--line);
   position:relative;
   vertical-align:middle;
   flex:none;
+  cursor:pointer;
 }
 .dash .toggle::after {
   content:"";
   position:absolute;
-  right:2px;
+  left:2px;
   top:2px;
   width:15px;
   height:15px;
   border-radius:50%;
   background:#fff;
+  transition:left 0.2s ease;
+}
+.dash .toggle[aria-pressed="true"] {
+  background:var(--acc);
+}
+.dash .toggle[aria-pressed="true"]::after {
+  left:17px;
 }
 
 .dash .tabs {

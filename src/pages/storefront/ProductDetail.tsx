@@ -11,6 +11,7 @@ function formatCurrency(value: number) {
 export default function ProductDetailPage() {
   const { productId } = useParams();
   const [quantity, setQuantity] = useState(1);
+  const [addedToCart, setAddedToCart] = useState(false);
 
   const productData = useMemo(() => {
     if (!productId) {
@@ -46,6 +47,7 @@ export default function ProductDetailPage() {
       },
       quantity,
     );
+    setAddedToCart(true);
   };
 
   return (
@@ -82,8 +84,11 @@ export default function ProductDetailPage() {
             </div>
 
             <button type="button" className="btn" onClick={handleAddToCart} style={{ width: "100%", justifyContent: "center", marginBottom: 12 }}>
-              Add {quantity} to cart
+              {addedToCart ? "Added to cart" : `Add ${quantity} to cart`}
             </button>
+            <div aria-live="polite" style={{ minHeight: 20, color: "#2d6a4f", fontSize: 14, marginBottom: 12, fontWeight: 600 }}>
+              {addedToCart ? "Added to cart." : ""}
+            </div>
 
             <div style={{ color: "#4c5d47", fontSize: 14, marginBottom: 20 }}>
               {product.available > 0 ? `In stock · ${product.available} units left` : "Currently unavailable"}

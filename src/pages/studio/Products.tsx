@@ -32,6 +32,7 @@ export default function StudioProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [productSort, setProductSort] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     let active = true;
@@ -63,7 +64,9 @@ export default function StudioProducts() {
   }, []);
 
   const brand = brands.find((item) => item.id === selectedBrandId) ?? brands[0];
-  const brandProducts = products.filter((product) => product.brandId === selectedBrandId);
+  const brandProducts = [...products.filter((product) => product.brandId === selectedBrandId)].sort((a, b) =>
+    productSort === "asc" ? a.available - b.available : b.available - a.available,
+  );
 
   const resetForm = () => {
     setEditingId(null);
@@ -222,7 +225,14 @@ export default function StudioProducts() {
         <select className="search">
           <option>All status</option>
         </select>
-        <button className="btn ">⚲</button>
+        <button
+          className="btn "
+          type="button"
+          onClick={() => setProductSort((current) => (current === "asc" ? "desc" : "asc"))}
+          aria-label="Toggle product sort direction"
+        >
+          ⚲ {productSort === "asc" ? "Low to high" : "High to low"}
+        </button>
       </div>
       <section className="card ">
         <h3 />
