@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { fetchOrders, updateOrderStatus, type ApiOrder } from "../../lib/store-api";
+import { getVisibleOrders, type StudioOrderFilter } from "./studio-utils";
 import "./Orders.css";
 
 export default function StudioOrders() {
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<StudioOrderFilter | "ALL">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -46,7 +49,7 @@ export default function StudioOrders() {
   const totalOrders = orders.length;
   const pendingOrders = orders.filter((order) => order.status === "PENDING").length;
   const shippedOrders = orders.filter((order) => order.status === "SHIPPED").length;
-  const orderRows = orders.map((order) => ({
+  const orderRows = useMemo(() => orders.map((order) => ({
     id: order.id,
     customer: order.user?.name ?? "Customer",
     email: order.user?.email ?? "customer@example.com",
@@ -54,7 +57,12 @@ export default function StudioOrders() {
     items: order.items?.map((item) => `${item.quantity}× ${item.product?.name ?? "Product"}`).join(", ") || "Order",
     status: order.status,
     date: order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-ZA", { month: "short", day: "numeric", year: "numeric" }) : "No date",
-  }));
+  })), [orders]);
+
+  const filteredOrderRows = useMemo(
+    () => getVisibleOrders(orderRows as Array<{ id: string; status?: string; user?: { name?: string; email?: string }; items?: Array<{ quantity?: number; product?: { name?: string } }>; total?: number | string }>, activeFilter, searchQuery),
+    [activeFilter, orderRows, searchQuery],
+  );
 
   return (
     <DashboardLayout
@@ -63,17 +71,39 @@ export default function StudioOrders() {
       subtitle={"Track orders, fulfill shipments, and keep your customers informed."}
       actions={
         <>
-          <input className="search" placeholder="Search by order #, customer, or product…" />
-          <button className="btn ">📅 {orders.length ? "Live orders" : "No orders"}</button>
+          <input
+            className="search"
+            placeholder="Search by order #, customer, or product…"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+          <button
+            className="btn "
+            type="button"
+            onClick={() => {
+              setActiveFilter("ALL");
+              setSearchQuery("");
+            }}
+          >
+            📅 {orders.length ? "Live orders" : "No orders"}
+          </button>
         </>
       }
     >
       <div className="split">
         <div>
           <div className="tabs">
-            <a href="#" className="on">All {totalOrders}</a>
-            <a href="#">Pending {pendingOrders}</a>
-            <a href="#">Shipped {shippedOrders}</a>
+            {(["ALL", "PENDING", "PAID", "SHIPPED"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={activeFilter === tab ? "on" : ""}
+                onClick={() => setActiveFilter(tab)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, marginRight: 12 }}
+              >
+                {tab === "ALL" ? "All" : tab.charAt(0).toUpperCase() + tab.slice(1).toLowerCase()} {tab === "ALL" ? totalOrders : tab === "PENDING" ? pendingOrders : tab === "PAID" ? orders.filter((order) => order.status === "PAID").length : shippedOrders}
+              </button>
+            ))}
           </div>
           {error && <p className="auth-error" style={{ marginBottom: 12 }}>{error}</p>}
           {loading ? (
@@ -91,7 +121,7 @@ export default function StudioOrders() {
                     <th>STATUS</th>
                     <th>ACTION</th>
                   </tr>
-                  {orderRows.map((row) => (
+                  {filteredOrderRows.map((row) => (
                     <tr key={row.id}>
                       <td><b>{row.id.slice(0, 8).toUpperCase()}</b></td>
                       <td>

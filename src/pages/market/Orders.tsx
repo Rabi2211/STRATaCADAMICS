@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { fetchOrders, updateOrderStatus, type ApiOrder } from "../../lib/store-api";
@@ -67,7 +68,7 @@ export default function MarketOrders() {
       actions={
         <>
           <button className="btn ">{orders.length ? "Live marketplace orders" : "No orders"}</button>
-          <button className="btn pri">View storefront ↗</button>
+          <Link to="/" className="btn pri">View storefront ↗</Link>
         </>
       }
     >

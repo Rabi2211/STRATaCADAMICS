@@ -3,9 +3,15 @@ import DashboardLayout from "../../components/DashboardLayout";
 import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Purchases.css";
 
+const purchaseSeed = [
+  { supplier: "Northline Studio", location: "Los Angeles, CA", product: "Organic cotton essentials", qty: 132, cost: 8450, expected: "Apr 22, 2025", status: "Draft" },
+  { supplier: "Moss & Oak Co.", location: "Chicago, IL", product: "Premium knitwear", qty: 96, cost: 7125, expected: "Apr 18, 2025", status: "Ordered" },
+];
+
 export default function StudioPurchases() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState(purchaseSeed);
 
   useEffect(() => {
     let active = true;
@@ -27,9 +33,24 @@ export default function StudioPurchases() {
     };
   }, []);
 
-  const openPurchaseOrders = Math.max(1, products.length);
-  const incomingUnits = products.reduce((sum, product) => sum + Math.max(50, product.available), 0);
-  const estimatedCost = products.reduce((sum, product) => sum + Number(product.price) * Math.max(10, Math.round(product.available * 0.2)), 0);
+  const openPurchaseOrders = purchaseOrders.length || Math.max(1, products.length);
+  const incomingUnits = purchaseOrders.reduce((sum, order) => sum + order.qty, 0) || products.reduce((sum, product) => sum + Math.max(50, product.available), 0);
+  const estimatedCost = purchaseOrders.reduce((sum, order) => sum + order.cost, 0) || products.reduce((sum, product) => sum + Number(product.price) * Math.max(10, Math.round(product.available * 0.2)), 0);
+
+  const handleCreatePurchaseOrder = () => {
+    const nextIndex = purchaseOrders.length + 1;
+    const nextOrder = {
+      supplier: `New supplier ${nextIndex}`,
+      location: "Portland, OR",
+      product: "Seasonal replenishment",
+      qty: 80 + nextIndex * 12,
+      cost: 5200 + nextIndex * 900,
+      expected: "May 02, 2025",
+      status: "Draft",
+    };
+
+    setPurchaseOrders((current) => [nextOrder, ...current]);
+  };
 
   return (
     <DashboardLayout
@@ -38,7 +59,7 @@ export default function StudioPurchases() {
       subtitle={"Create purchase orders and manage supplier replenishment."}
       actions={
         <>
-          <button className="btn pri">+ Create purchase order</button>
+          <button className="btn pri" type="button" onClick={handleCreatePurchaseOrder}>+ Create purchase order</button>
         </>
       }
     >
@@ -89,32 +110,32 @@ export default function StudioPurchases() {
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
-                  {products.slice(0, 6).map((product, index) => {
-                    const brand = brands.find((item) => item.id === product.brandId);
-                    return (
-                      <tr key={product.id}>
-                        <td>
-                          <b>PO-{1043 - index}</b>
-                        </td>
-                        <td>
-                          {brand?.name ?? "Supplier"}
-                          <span className="sub">{index % 2 === 0 ? "Los Angeles, CA" : "Chicago, IL"}</span>
-                        </td>
-                        <td>
-                          <span className="thumb t1" />
-                          {Math.max(1, Math.round(index + 1))} product{Math.max(1, Math.round(index + 1)) > 1 ? "s" : ""}
-                          <span className="sub">{product.name}</span>
-                        </td>
-                        <td>{Math.max(20, product.available)} units</td>
-                        <td>{index % 2 === 0 ? "Apr 22, 2025" : "Apr 18, 2025"}</td>
-                        <td>R{(Number(product.price) * Math.max(10, Math.round(product.available * 0.2))).toLocaleString()}</td>
-                        <td>
-                          <span className={`pill ${index % 2 === 0 ? "orange" : "green"}`}>{index % 2 === 0 ? "Draft" : "Ordered"}</span>
-                        </td>
-                        <td>👁 View ⋯</td>
-                      </tr>
-                    );
-                  })}
+                  {purchaseOrders.map((order, index) => (
+                    <tr key={`${order.supplier}-${index}`}>
+                      <td>
+                        <b>PO-{1043 - index}</b>
+                      </td>
+                      <td>
+                        {order.supplier}
+                        <span className="sub">{order.location}</span>
+                      </td>
+                      <td>
+                        <span className="thumb t1" />
+                        {order.product}
+                      </td>
+                      <td>{order.qty} units</td>
+                      <td>{order.expected}</td>
+                      <td>R{order.cost.toLocaleString()}</td>
+                      <td>
+                        <span className={`pill ${order.status === "Draft" ? "orange" : "green"}`}>{order.status}</span>
+                      </td>
+                      <td>
+                        <button type="button" className="btn" onClick={() => setPurchaseOrders((current) => current.map((entry, entryIndex) => entryIndex === index ? { ...entry, status: entry.status === "Draft" ? "Ordered" : "Draft" } : entry))}>
+                          {order.status === "Draft" ? "Approve" : "Reopen"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

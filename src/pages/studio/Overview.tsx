@@ -9,6 +9,7 @@ type FulfillmentState = Record<string, { shipped: boolean; trackingAdded: boolea
 export default function StudioOverview() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
+  const [dateRange, setDateRange] = useState<"7D" | "30D">("7D");
 
   useEffect(() => {
     let active = true;
@@ -63,7 +64,13 @@ export default function StudioOverview() {
       subtitle={`Here's what's happening with ${brand?.name ?? "your store"} today.`}
       actions={
         <>
-          <button type="button" className="btn ">📅 Apr 21, 2025 – Apr 27, 2025 ▾</button>
+          <button
+            type="button"
+            className="btn "
+            onClick={() => setDateRange((current) => (current === "7D" ? "30D" : "7D"))}
+          >
+            📅 {dateRange === "7D" ? "Apr 21, 2025 – Apr 27, 2025" : "Apr 1, 2025 – Apr 30, 2025"} ▾
+          </button>
           🔔
           <Link to="/" className="btn pri">View storefront ↗</Link>
         </>

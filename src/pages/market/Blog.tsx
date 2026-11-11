@@ -11,6 +11,8 @@ export default function MarketBlog() {
   const [showComposer, setShowComposer] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftCategory, setDraftCategory] = useState("Style Guide");
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [previewPostId, setPreviewPostId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Array<{
     id: string;
     title: string;
@@ -59,24 +61,44 @@ export default function MarketBlog() {
     return true;
   });
 
+  const previewPost = posts.find((post) => post.id === previewPostId) ?? null;
+
+  const openComposer = (post?: { title: string; category: string; id?: string }) => {
+    setDraftTitle(post?.title ?? "");
+    setDraftCategory(post?.category ?? "Style Guide");
+    setEditingPostId(post?.id ?? null);
+    setShowComposer(true);
+    setPreviewPostId(null);
+  };
+
   const handlePublish = (event: FormEvent) => {
     event.preventDefault();
     if (!draftTitle.trim()) {
       return;
     }
 
-    const newPost = {
-      id: `draft-${Date.now()}`,
-      title: draftTitle.trim(),
-      category: draftCategory,
-      status: "Published" as const,
-      author: "Store owner",
-      date: "Today",
-    };
+    if (editingPostId) {
+      setPosts((current) => current.map((post) =>
+        post.id === editingPostId
+          ? { ...post, title: draftTitle.trim(), category: draftCategory }
+          : post,
+      ));
+    } else {
+      const newPost = {
+        id: `draft-${Date.now()}`,
+        title: draftTitle.trim(),
+        category: draftCategory,
+        status: "Published" as const,
+        author: "Store owner",
+        date: "Today",
+      };
 
-    setPosts((current) => [newPost, ...current]);
+      setPosts((current) => [newPost, ...current]);
+    }
+
     setDraftTitle("");
     setDraftCategory("Style Guide");
+    setEditingPostId(null);
     setShowComposer(false);
     setActiveTab("All posts");
   };
@@ -88,13 +110,13 @@ export default function MarketBlog() {
       subtitle={"Share your story, showcase new collections, and grow your brand."}
       actions={
         <>
-          <button className="btn pri" type="button" onClick={() => setShowComposer(true)}>✎ Write a post</button>
+          <button className="btn pri" type="button" onClick={() => openComposer()}>✎ Write a post</button>
         </>
       }
     >
       {showComposer && (
         <form className="card" onSubmit={handlePublish} style={{ marginBottom: 18 }}>
-          <h3>Write a new post</h3>
+          <h3>{editingPostId ? "Edit post" : "Write a new post"}</h3>
           <div className="grid g2">
             <label className="field">
               <span>Title</span>
@@ -110,8 +132,8 @@ export default function MarketBlog() {
             </label>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button className="btn pri" type="submit">Publish post</button>
-            <button className="btn" type="button" onClick={() => setShowComposer(false)}>Cancel</button>
+            <button className="btn pri" type="submit">{editingPostId ? "Update post" : "Publish post"}</button>
+            <button className="btn" type="button" onClick={() => { setShowComposer(false); setEditingPostId(null); setDraftTitle(""); setDraftCategory("Style Guide"); }}>Cancel</button>
           </div>
         </form>
       )}
@@ -165,9 +187,9 @@ export default function MarketBlog() {
                           <span className="pill green">{post.status}</span>
                         </td>
                         <td>
-                          <button className="btn " type="button">Edit</button>
+                          <button className="btn " type="button" onClick={() => openComposer(post)}>Edit</button>
                           {" "}
-                          <button className="btn " type="button">Preview</button>
+                          <button className="btn " type="button" onClick={() => setPreviewPostId(post.id)}>Preview</button>
                         </td>
                       </tr>
                     ))}
@@ -176,6 +198,17 @@ export default function MarketBlog() {
               </div>
             </section>
             <div className="stack">
+              {previewPost && (
+                <section className="card ">
+                  <h3>Preview</h3>
+                  <b>{previewPost.title}</b>
+                  <div className="sub" style={{ marginTop: 8 }}>{previewPost.category} · {previewPost.author}</div>
+                  <p style={{ color: "#4a463f", lineHeight: 1.7 }}>
+                    This preview shows how the post will appear in the brand story section of the storefront.
+                  </p>
+                  <button className="btn" type="button" onClick={() => setPreviewPostId(null)}>Close preview</button>
+                </section>
+              )}
               <section className="card ">
                 <h3>Blog performance</h3>
                 <div className="row">
