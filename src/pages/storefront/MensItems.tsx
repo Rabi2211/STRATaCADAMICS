@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import StoreLayout from "../../components/StoreLayout";
 import { STORE, filterAndSortProducts, type StoreProduct } from "../../data/store";
 import { addToCart } from "../../lib/cart";
+import { readWishlist, toggleWishlist } from "../../lib/wishlist";
 import "./MensItems.css";
 
 const SECTION_DATA: Record<string, { title: string; categories: string[] }> = {
@@ -261,6 +262,7 @@ function getVisualMatchScore(uploadedImage: VisualSignature, product: StoreProdu
 
 function ProductCard({ product }: { product: StoreProduct }) {
   const [isAdded, setIsAdded] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(() => readWishlist().includes(product.id));
   const brand = STORE.brands.find((entry) => entry.id === product.brandId);
 
   const handleAddToCart = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -276,10 +278,22 @@ function ProductCard({ product }: { product: StoreProduct }) {
     setIsAdded(true);
   };
 
+  const handleToggleFavorite = () => {
+    setIsFavorite(toggleWishlist(product.id).includes(product.id));
+  };
+
   return (
     <article className="catalog-card" aria-label={`${product.name} from ${product.category}`}>
       <div className={`catalog-card__image ${product.imageClass}`}>
-        <span className="catalog-card__favorite" aria-label="Save to wishlist">♡</span>
+        <button
+          type="button"
+          className="catalog-card__favorite"
+          aria-label={isFavorite ? "Remove from wishlist" : "Add to wishlist"}
+          aria-pressed={isFavorite}
+          onClick={handleToggleFavorite}
+        >
+          {isFavorite ? "♥" : "♡"}
+        </button>
         <span className={`catalog-card__badge ${product.available >= 30 ? "catalog-card__badge--featured" : "catalog-card__badge--seller"}`}>
           {product.available >= 30 ? "Featured" : "Best seller"}
         </span>
@@ -411,7 +425,9 @@ export default function MensItems() {
         {imageMatchText && (
           <div className="catalog-match-banner">{imageMatchText}</div>
         )}
+      </section>
 
+      <section className="pgrid">
         <div className="catalog-toolbar">
           <div className="catalog-toolbar__segmentation" aria-label="Browse collection type">
             <button
@@ -471,9 +487,7 @@ export default function MensItems() {
             </select>
           </div>
         </div>
-      </section>
 
-      <section className="pgrid">
         {sectionProducts.length === 0 ? (
           <div className="catalog-empty-state">
             No products match this filter yet. Try another category or search term.

@@ -1,26 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import StoreLayout from "../../components/StoreLayout";
 import { STORE } from "../../data/store";
-
-const STORAGE_KEY = "strata-wishlist";
+import { readWishlist, toggleWishlist } from "../../lib/wishlist";
 
 export default function WishlistPage() {
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
-  });
-
-  useEffect(() => {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(wishlist));
-  }, [wishlist]);
+  const [wishlist, setWishlist] = useState<string[]>(readWishlist);
 
   const items = STORE.products.filter((product) => wishlist.includes(product.id));
 
-  const toggleWishlist = (productId: string) => {
-    setWishlist((current) => current.includes(productId)
-      ? current.filter((id) => id !== productId)
-      : [...current, productId]);
+  const handleRemove = (productId: string) => {
+    setWishlist(toggleWishlist(productId));
   };
 
   return (
@@ -38,7 +28,7 @@ export default function WishlistPage() {
               <article key={product.id} style={{ border: "1px solid #e5e0d9", background: "#fff", borderRadius: 14, padding: 18 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <strong>{product.name}</strong>
-                  <button type="button" onClick={() => toggleWishlist(product.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#7d2f2a" }}>Remove</button>
+                  <button type="button" onClick={() => handleRemove(product.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#7d2f2a" }}>Remove</button>
                 </div>
                 <p style={{ margin: "8px 0 0" }}>{product.category}</p>
                 <p style={{ margin: "8px 0 16px", fontWeight: 700 }}>R{product.price.toFixed(2)}</p>

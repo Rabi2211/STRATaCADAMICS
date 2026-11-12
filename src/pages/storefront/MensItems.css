@@ -216,6 +216,24 @@
   color: #533421;
   font-size: 18px;
   font-weight: 700;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.sf .catalog-card__favorite:hover {
+  background: #fff;
+  transform: scale(1.08);
+}
+
+.sf .catalog-card__favorite[aria-pressed="true"] {
+  color: #a33b36;
+}
+
+.sf .catalog-card__favorite:focus-visible {
+  outline: 2px solid #533421;
+  outline-offset: 2px;
 }
 
 .sf .catalog-card__badge {
