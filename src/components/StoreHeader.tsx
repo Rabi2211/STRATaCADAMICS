@@ -89,6 +89,9 @@ export default function StoreHeader() {
       return;
     }
 
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsAuthOpen(false);
@@ -96,7 +99,10 @@ export default function StoreHeader() {
     };
 
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isAuthOpen]);
 
   const roleLabel: Record<AuthRole, string> = {
@@ -206,6 +212,24 @@ export default function StoreHeader() {
                     </Link>
                   );
                 })}
+
+                {session && session.user.role === "customer" ? (
+                  <button type="button" className="menu-panel__item" onClick={() => {
+                    setIsMenuOpen(false);
+                    handleLogout();
+                  }}>
+                    <span>sign out</span>
+                  </button>
+                ) : session ? (
+                  <>
+                    <Link to="/cart" className="menu-panel__item" data-menu-item="cart" onClick={() => setIsMenuOpen(false)}>
+                      <span>cart</span>
+                    </Link>
+                    <Link to="/wishlist" className="menu-panel__item" data-menu-item="wishlist" onClick={() => setIsMenuOpen(false)}>
+                      <span>wishlist</span>
+                    </Link>
+                  </>
+                ) : null}
               </nav>
             </div>
           )}
@@ -221,21 +245,31 @@ export default function StoreHeader() {
         </label>
 
         <nav className="actions" aria-label="Account">
-          <button type="button" className="auth-trigger" onClick={() => setIsAuthOpen(true)}>
-            <Icon d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0" />
-            {session ? session.user.name : "sign in"}
-          </button>
+          {session ? (
+            <Link to="/profile" className="auth-trigger" onClick={() => setIsAuthOpen(false)}>
+              <Icon d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0" />
+              {session.user.name}
+            </Link>
+          ) : (
+            <button type="button" className="auth-trigger" onClick={() => setIsAuthOpen(true)}>
+              <Icon d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0" />
+              sign in
+            </button>
+          )}
           {portalPath && portalLabel && (
             <Link to={portalPath} className="auth-trigger" onClick={() => setIsAuthOpen(false)}>
               {portalLabel}
             </Link>
           )}
-          {session && (
+          {session && session.user.role !== "customer" && (
             <button type="button" className="auth-trigger" onClick={handleLogout}>
               sign out
             </button>
           )}
-          <a href="/cart"><Icon d="M3 4h2l2 12h11l2-8H6" /> cart</a>
+          {session?.user.role === "customer" && (
+            <a href="/cart"><Icon d="M3 4h2l2 12h11l2-8H6" /> cart</a>
+          )}
+          {session?.user.role !== "customer" && <a href="/cart"><Icon d="M3 4h2l2 12h11l2-8H6" /> cart</a>}
           <a href="/wishlist"><Icon d="M12 20s-8-5-8-11a4.5 4.5 0 018-2.5A4.5 4.5 0 0120 9c0 6-8 11-8 11z" /> wishlist</a>
         </nav>
       </div>

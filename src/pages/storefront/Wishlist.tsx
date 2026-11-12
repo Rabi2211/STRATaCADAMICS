@@ -24,8 +24,8 @@ export default function WishlistPage() {
   };
 
   return (
-    <StoreLayout>
-      <main style={{ maxWidth: 960, margin: "32px auto", padding: "0 20px 80px" }}>
+    <StoreLayout fullWidth>
+      <main style={{ width: "100%", maxWidth: "none", margin: 0, padding: "32px 32px 80px" }}>
         <h1 style={{ marginBottom: 12 }}>Wishlist</h1>
         {items.length === 0 ? (
           <>

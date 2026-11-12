@@ -38,6 +38,7 @@ const ROUTES = [
   { path: "/terms", label: "Storefront · Terms", Component: lazy(() => import("./pages/storefront/TrustPage")) },
   { path: "/payment/callback", label: "Storefront · Payment callback", Component: lazy(() => import("./pages/storefront/PaymentCallback")) },
   { path: "/account/orders", label: "Storefront · My orders", Component: lazy(() => import("./pages/storefront/MyOrders")) },
+  { path: "/profile", label: "Account · Profile", Component: lazy(() => import("./pages/Profile")) },
   { path: "/studio/overview", label: "Studio · Overview", Component: lazy(() => import("./pages/studio/Overview")) },
   { path: "/studio/products", label: "Studio · Products", Component: lazy(() => import("./pages/studio/Products")) },
   { path: "/studio/orders", label: "Studio · Orders", Component: lazy(() => import("./pages/studio/Orders")) },

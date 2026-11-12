@@ -3,10 +3,10 @@ import StoreHeader from "./StoreHeader";
 import StoreFooter from "./StoreFooter";
 import "../styles/storefront.css";
 
-export default function StoreLayout({ children }: { children: ReactNode }) {
+export default function StoreLayout({ children, fullWidth = false }: { children: ReactNode; fullWidth?: boolean }) {
   return (
     <div className="sf">
-      <div className="page" id="top">
+      <div className={`page${fullWidth ? " page--full" : ""}`} id="top">
         <StoreHeader />
         <main>{children}</main>
         <StoreFooter />

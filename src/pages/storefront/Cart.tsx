@@ -36,8 +36,8 @@ export default function CartPage() {
 
   if (!items.length) {
     return (
-      <StoreLayout>
-        <main style={{ maxWidth: 960, margin: "32px auto", padding: "0 20px 80px" }}>
+      <StoreLayout fullWidth>
+        <main style={{ width: "100%", maxWidth: "none", margin: 0, padding: "32px 32px 80px" }}>
           <h1 style={{ fontSize: 32, marginBottom: 12 }}>Your cart</h1>
           <p style={{ marginBottom: 20 }}>There are no items in your cart yet.</p>
           <Link to="/men" className="btn" style={{ display: "inline-block" }}>Continue shopping</Link>
@@ -47,11 +47,11 @@ export default function CartPage() {
   }
 
   return (
-    <StoreLayout>
-      <main style={{ maxWidth: 960, margin: "32px auto", padding: "0 20px 80px" }}>
+    <StoreLayout fullWidth>
+      <main style={{ width: "100%", maxWidth: "none", margin: 0, padding: "32px 32px 80px" }}>
         <h1 style={{ fontSize: 32, marginBottom: 20 }}>Your cart</h1>
 
-        <div style={{ display: "grid", gap: 24, gridTemplateColumns: "minmax(0, 2fr) minmax(260px, 1fr)" }}>
+        <div style={{ display: "grid", gap: 24, gridTemplateColumns: "minmax(0, 2fr) minmax(260px, 1fr)", minHeight: "100%" }}>
           <div style={{ display: "grid", gap: 12 }}>
             {items.map((item) => (
               <div key={item.id} style={{ border: "1px solid #e5e0d9", borderRadius: 14, padding: 16, background: "#fff", display: "grid", gap: 12 }}>

@@ -88,7 +88,7 @@ function FeaturedCollections() {
   useEffect(() => {
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % FEATURED_COLLECTIONS.length);
-    }, 5000);
+    }, 6500);
 
     return () => window.clearInterval(timer);
   }, []);
@@ -102,8 +102,8 @@ function FeaturedCollections() {
     <section className="featured">
       <div className="featured__header">
         <div>
-          <p className="eyebrow">The seasonal edit</p>
-          <h2>Editorial edits for the season</h2>
+          <p className="eyebrow">The seasonal edits for STRATa</p>
+          <h2>STRATa edits for the season</h2>
         </div>
         <Link to="/men" className="btn btn--small">Shop all</Link>
       </div>
@@ -155,24 +155,53 @@ function FeaturedCollections() {
 }
 
 function Catalog() {
+  const [openBrands, setOpenBrands] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(STORE.brands.map((brand) => [brand.id, true])),
+  );
+
+  const toggleBrand = (brandId: string) => {
+    setOpenBrands((current) => ({
+      ...current,
+      [brandId]: !current[brandId],
+    }));
+  };
+
   return (
     <section className="catalog">
       <h2 className="catalog__title">Browse Catalog</h2>
       {STORE.brands.map((brand) => {
         const products = STORE.products.filter((product) => product.brandId === brand.id).slice(0, 4);
+        const isOpen = openBrands[brand.id] ?? true;
 
         return (
           <div key={brand.id} className="catalog__group">
-            <h3 className="catalog__heading">{brand.name.toUpperCase()} <span aria-hidden="true">▾</span></h3>
-            <div className="carousel">
-              {products.map((product) => (
-                <Link key={product.id} to={`/product/${product.id}`} className="card" aria-label={`${product.name} by ${brand.name}`}>
-                  <span style={{ display: "block", marginTop: "auto", fontSize: 12, color: "#241f1d", fontWeight: 700 }}>
-                    {product.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
+            <h3
+              className="catalog__heading"
+              onClick={() => toggleBrand(brand.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  toggleBrand(brand.id);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-expanded={isOpen}
+            >
+              <span>{brand.name.toUpperCase()}</span>
+              <span className={`catalog__chevron${isOpen ? " is-open" : ""}`} aria-hidden="true">▾</span>
+            </h3>
+            {isOpen && (
+              <div className="carousel">
+                {products.map((product) => (
+                  <Link key={product.id} to={`/product/${product.id}`} className="card" aria-label={`${product.name} by ${brand.name}`}>
+                    <span style={{ display: "block", marginTop: "auto", fontSize: 12, color: "#241f1d", fontWeight: 700 }}>
+                      {product.name}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
