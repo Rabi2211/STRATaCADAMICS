@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { NAV, type Kind } from "../data/nav";
 import "../styles/dashboard.css";
@@ -13,6 +13,21 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ kind, title, subtitle, actions, children }: DashboardLayoutProps) {
   const { label, tagline, items } = NAV[kind];
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const shouldHide = currentScrollY > lastScrollY.current && currentScrollY > 40;
+      setIsHeaderHidden(shouldHide);
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <div className="dash">
       <div className="app">
@@ -36,7 +51,7 @@ export default function DashboardLayout({ kind, title, subtitle, actions, childr
           </div>
         </aside>
         <main className="main">
-          <div className="head">
+          <div className={`head ${isHeaderHidden ? "head--hidden" : ""}`}>
             <div>
               <h1>{title}</h1>
               {subtitle && <p>{subtitle}</p>}

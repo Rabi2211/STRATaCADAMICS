@@ -5,6 +5,124 @@
   max-width: none;
 }
 
+.sf .feedback-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 22, 18, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 20px;
+  overscroll-behavior: contain;
+}
+
+.sf .feedback-modal {
+  position: relative;
+  width: min(100%, 480px);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #fffaf5;
+  border: 1px solid rgba(122, 74, 34, 0.18);
+  border-radius: 18px;
+  padding: 28px 22px 22px;
+  box-shadow: 0 28px 42px rgba(28, 22, 18, 0.18);
+}
+
+.sf .feedback-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  color: #3d2d27;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sf .feedback-modal h3 {
+  margin: 0 0 8px;
+  color: #201915;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+}
+
+.sf .feedback-modal__subtitle {
+  margin: 0 0 18px;
+  color: #665d57;
+  font-size: 0.92rem;
+}
+
+.sf .feedback-modal__form {
+  display: grid;
+  gap: 16px;
+}
+
+.sf .feedback-modal__field {
+  display: grid;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #332b28;
+}
+
+.sf .feedback-modal__field input,
+.sf .feedback-modal__field select,
+.sf .feedback-modal__field textarea {
+  width: 100%;
+  border: 1px solid rgba(122, 74, 34, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fff;
+  color: #241f1d;
+}
+
+.sf .feedback-modal__field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.sf .feedback-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.sf .feedback-modal__primary,
+.sf .feedback-modal__secondary {
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sf .feedback-modal__primary {
+  border: 1px solid #7a4a22;
+  background: #7a4a22;
+  color: #fff;
+}
+
+.sf .feedback-modal__secondary {
+  border: 1px solid rgba(122, 74, 34, 0.35);
+  background: transparent;
+  color: #3d2d27;
+}
+
+.sf .feedback-modal__success {
+  display: grid;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.sf .feedback-modal__success p {
+  margin: 0;
+  color: #5d514d;
+}
+
 .sf .hero {
   position: relative;
   min-height: calc(100vh - 120px);

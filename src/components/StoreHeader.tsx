@@ -183,7 +183,7 @@ export default function StoreHeader() {
   };
 
   return (
-    <header className="header">
+    <header className="header header--sticky">
       <div className="header__bar">
         <div className="header__menu-wrap" ref={menuRef}>
           <button

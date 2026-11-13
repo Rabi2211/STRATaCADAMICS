@@ -63,6 +63,11 @@
   background: #fff;
 }
 
+.sf .header--sticky {
+  position: relative;
+  z-index: 40;
+}
+
 .sf .header__bar {
   display: flex;
   align-items: center;
@@ -339,7 +344,7 @@
   z-index: 50;
   writing-mode: vertical-rl;
   background: #ccc;
-  color: #666;
+  color: #7a4a22;
   border: 0;
   font-size: 12px;
   padding: 14px 10px;
@@ -721,6 +726,14 @@
 }
 
 @media (max-width: 600px) {
+  .sf .auth-link {
+    display: block;
+    width: 100%;
+    margin: 4px 0 12px;
+    text-align: center;
+    font-size: 0.8rem;
+  }
+
   .sf .cart-page__main {
     padding: 24px 16px 52px !important;
   }

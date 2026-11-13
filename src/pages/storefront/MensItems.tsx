@@ -427,67 +427,67 @@ export default function MensItems() {
         )}
       </section>
 
-      <section className="pgrid">
-        <div className="catalog-toolbar">
-          <div className="catalog-toolbar__segmentation" aria-label="Browse collection type">
-            <button
-              type="button"
-              className={collectionMode === "featured" ? "is-active" : ""}
-              onClick={() => setCollectionMode("featured")}
-            >
-              Featured
-            </button>
-            <button
-              type="button"
-              className={collectionMode === "bestsellers" ? "is-active" : ""}
-              onClick={() => setCollectionMode("bestsellers")}
-            >
-              Best sellers
-            </button>
-          </div>
-
-          <div className="catalog-toolbar__controls">
-            <label className="catalog-search" aria-label="Search products">
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search products"
-              />
-            </label>
-
-            <button
-              type="button"
-              className="visual-search"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16">
-                <path d="M10.5 4.5a5.5 5.5 0 0 0-5.5 5.5v.5a5.5 5.5 0 0 0 8.68 4.3l3.8 3.8a1 1 0 0 0 1.41-1.41l-3.8-3.8A5.5 5.5 0 0 0 10.5 4.5Zm0 2a3.5 3.5 0 1 1 0 7a3.5 3.5 0 0 1 0-7Zm6.5 12.5a1 1 0 0 1 0-2h1.5a1 1 0 0 1 0 2H17Zm-7.5-5.5a2.5 2.5 0 1 0 0-5a2.5 2.5 0 0 0 0 5Z" fill="currentColor"/>
-              </svg>
-              Search with image
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={handleImageSearch}
-              aria-label="Search by image"
-            />
-
-            <select
-              aria-label="Sort products"
-              value={sort}
-              onChange={(event) => setSort(event.target.value as typeof sort)}
-            >
-              <option value="featured">Featured</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="name-asc">Name A-Z</option>
-            </select>
-          </div>
+      <div className="catalog-toolbar">
+        <div className="catalog-toolbar__segmentation" aria-label="Browse collection type">
+          <button
+            type="button"
+            className={collectionMode === "featured" ? "is-active" : ""}
+            onClick={() => setCollectionMode("featured")}
+          >
+            Featured
+          </button>
+          <button
+            type="button"
+            className={collectionMode === "bestsellers" ? "is-active" : ""}
+            onClick={() => setCollectionMode("bestsellers")}
+          >
+            Best sellers
+          </button>
         </div>
 
+        <div className="catalog-toolbar__controls">
+          <label className="catalog-search" aria-label="Search products">
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search products"
+            />
+          </label>
+
+          <button
+            type="button"
+            className="visual-search"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M10.5 4.5a5.5 5.5 0 0 0-5.5 5.5v.5a5.5 5.5 0 0 0 8.68 4.3l3.8 3.8a1 1 0 0 0 1.41-1.41l-3.8-3.8A5.5 5.5 0 0 0 10.5 4.5Zm0 2a3.5 3.5 0 1 1 0 7a3.5 3.5 0 0 1 0-7Zm6.5 12.5a1 1 0 0 1 0-2h1.5a1 1 0 0 1 0 2H17Zm-7.5-5.5a2.5 2.5 0 1 0 0-5a2.5 2.5 0 0 0 0 5Z" fill="currentColor"/>
+            </svg>
+            Search with image
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={handleImageSearch}
+            aria-label="Search by image"
+          />
+
+          <select
+            aria-label="Sort products"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as typeof sort)}
+          >
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="name-asc">Name A-Z</option>
+          </select>
+        </div>
+      </div>
+
+      <section className="pgrid">
         {sectionProducts.length === 0 ? (
           <div className="catalog-empty-state">
             No products match this filter yet. Try another category or search term.
