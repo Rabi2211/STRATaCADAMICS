@@ -86,3 +86,20 @@ Open `/pages` for an index of every page.
 - `src/pages/<area>/<Page>.tsx` + `<Page>.css` – one component and one stylesheet per page
 - `src/styles` – shared dashboard and storefront styles (scoped under `.dash` / `.sf`)
 - `src/data` – navigation and storefront data
+
+### Newsletter setup
+
+The storefront exposes these Firebase Functions endpoints:
+
+- `POST /api/newsletter/subscribe` stores normalized, deduplicated subscribers in `newsletterSubscribers`.
+- `POST /api/newsletter/send` sends updates through Resend to active subscribers. This endpoint requires a verified Firebase admin account.
+
+Set the server-side secret in Firebase Functions:
+
+```bash
+firebase functions:secrets:set RESEND_API_KEY
+firebase functions:secrets:set NEWSLETTER_FROM
+firebase deploy --only functions,firestore:rules
+```
+
+`NEWSLETTER_FROM` is optional and should use a sender/domain verified in Resend. Keep `RESEND_API_KEY` out of `VITE_*` variables and browser code. The email-submission endpoint is public, but subscriber and campaign documents are denied to direct client access by Firestore rules.

@@ -14,6 +14,8 @@ export default function MarketInventory() {
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
   const [showAdjuster, setShowAdjuster] = useState(false);
   const [notice, setNotice] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     let active = true;
@@ -84,6 +86,15 @@ export default function MarketInventory() {
     setNotice("Inventory exported as CSV.");
   };
 
+  // Pagination logic
+  const totalPages = Math.max(1, Math.ceil(inventoryRows.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedInventoryRows = inventoryRows.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [inventoryRows.length]);
+
   return (
     <DashboardLayout
       kind="market"
@@ -153,7 +164,7 @@ export default function MarketInventory() {
                   <th>Quantity</th>
                   <th>Action</th>
                 </tr>
-                {inventoryRows.map((product) => (
+                {paginatedInventoryRows.map((product) => (
                   <tr key={product.id}>
                     <td>
                       <span className={`thumb ${product.imageClass}`} />
@@ -183,7 +194,20 @@ export default function MarketInventory() {
               </tbody>
             </table>
           </div>
-          <p className="sub">Showing 1–{inventoryRows.length} of {inventoryRows.length} products</p>
+          <p className="sub">
+            {inventoryRows.length === 0
+              ? "Showing 0 of 0 products"
+              : `Showing ${((safeCurrentPage - 1) * pageSize) + 1}–${Math.min(safeCurrentPage * pageSize, inventoryRows.length)} of ${inventoryRows.length} products`}
+          </p>
+          {inventoryRows.length > 0 && (
+            <div className="pager">
+              <button type="button" className="btn" disabled={safeCurrentPage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Previous</button>
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                <button key={page} type="button" className={page === safeCurrentPage ? "on" : "btn"} onClick={() => setCurrentPage(page)}>{page}</button>
+              ))}
+              <button type="button" className="btn" disabled={safeCurrentPage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}>Next</button>
+            </div>
+          )}
         </section>
         <div className="stack">
           <section className="card ">

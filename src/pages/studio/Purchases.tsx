@@ -1,41 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
 import "./Purchases.css";
 
-const purchaseSeed = [
-  { supplier: "Northline Studio", location: "Los Angeles, CA", product: "Organic cotton essentials", qty: 132, cost: 8450, expected: "Apr 22, 2025", status: "Draft" },
-  { supplier: "Moss & Oak Co.", location: "Chicago, IL", product: "Premium knitwear", qty: 96, cost: 7125, expected: "Apr 18, 2025", status: "Ordered" },
-];
+const purchaseSeed: Array<{ supplier: string; location: string; product: string; qty: number; cost: number; expected: string; status: string }> = [];
 
 export default function StudioPurchases() {
-  const [, setBrands] = useState<ApiBrand[]>([]);
-  const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState(purchaseSeed);
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
-        if (!active) return;
-        setBrands(nextBrands);
-        setProducts(nextProducts.map((product) => mapApiProduct(product)));
-      } catch (error) {
-        if (active) console.error("Unable to load studio purchases", error);
-      }
-    };
-
-    void load();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const openPurchaseOrders = purchaseOrders.length || Math.max(1, products.length);
-  const incomingUnits = purchaseOrders.reduce((sum, order) => sum + order.qty, 0) || products.reduce((sum, product) => sum + Math.max(50, product.available), 0);
-  const estimatedCost = purchaseOrders.reduce((sum, order) => sum + order.cost, 0) || products.reduce((sum, product) => sum + Number(product.price) * Math.max(10, Math.round(product.available * 0.2)), 0);
+  const openPurchaseOrders = purchaseOrders.length;
+  const incomingUnits = purchaseOrders.reduce((sum, order) => sum + order.qty, 0);
+  const estimatedCost = purchaseOrders.reduce((sum, order) => sum + order.cost, 0);
 
   const handleCreatePurchaseOrder = () => {
     const nextIndex = purchaseOrders.length + 1;

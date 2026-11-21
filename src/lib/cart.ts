@@ -5,6 +5,7 @@ export type CartEntry = {
   name: string;
   brandId?: string;
   imageClass?: string;
+  imageUrl?: string | null;
   price: number;
   quantity: number;
 };
@@ -36,6 +37,7 @@ export function addToCart(product: {
   name: string;
   brandId?: string;
   imageClass?: string;
+  imageUrl?: string | null;
   price: number | string;
 }, quantity = 1): CartEntry[] {
   const nextQuantity = Math.max(1, Number(quantity) || 1);
@@ -53,6 +55,7 @@ export function addToCart(product: {
       name: product.name,
       brandId: product.brandId,
       imageClass: product.imageClass,
+      imageUrl: product.imageUrl ?? null,
       price: Number(product.price ?? 0),
       quantity: nextQuantity,
     });

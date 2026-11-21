@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import StoreLayout from "../../components/StoreLayout";
 import { STORE, filterAndSortProducts, type StoreProduct } from "../../data/store";
@@ -282,9 +282,18 @@ function ProductCard({ product }: { product: StoreProduct }) {
     setIsFavorite(toggleWishlist(product.id).includes(product.id));
   };
 
+  const productImageStyle = product.imageUrl
+    ? {
+        backgroundImage: `url("${product.imageUrl}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }
+    : undefined;
+
   return (
     <article className="catalog-card" aria-label={`${product.name} from ${product.category}`}>
-      <div className={`catalog-card__image ${product.imageClass}`}>
+      <div className={`catalog-card__image ${product.imageClass}`} style={productImageStyle}>
         <button
           type="button"
           className="catalog-card__favorite"
@@ -327,12 +336,29 @@ export default function MensItems() {
 
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [mobileCategoryMenuOpen, setMobileCategoryMenuOpen] = useState(false);
   const [collectionMode, setCollectionMode] = useState<CollectionMode>("featured");
   const [sort, setSort] = useState<"featured" | "price-asc" | "price-desc" | "name-asc">("featured");
   const [visualSignature, setVisualSignature] = useState<VisualSignature | null>(null);
   const [cloudAiAnalysis, setCloudAiAnalysis] = useState<CloudImageAnalysis | null>(null);
   const [imageMatchText, setImageMatchText] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileCategoryMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!mobileCategoryMenuOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileCategoryMenuRef.current && !mobileCategoryMenuRef.current.contains(event.target as Node)) {
+        setMobileCategoryMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [mobileCategoryMenuOpen]);
 
   const handleImageSearch = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -403,11 +429,18 @@ export default function MensItems() {
   }, [query, section, selectedCategory, sort, visualSignature, cloudAiAnalysis, collectionMode]);
 
   const current = SECTION_DATA[section];
+  const mobileCategoryOptions = current.categories.filter((category) => category !== "All");
+
+  const handleMobileCategoryChoice = (categoryValue: string) => {
+    setSelectedCategory(categoryValue);
+    setMobileCategoryMenuOpen(false);
+  };
 
   return (
     <StoreLayout>
       <section className="mhero">
         <h1 className="display">{current.title}</h1>
+
         <nav className="chips" aria-label="Product categories">
           {current.categories.map((category) => (
             <button
@@ -421,6 +454,46 @@ export default function MensItems() {
             </button>
           ))}
         </nav>
+
+        <div className="mobile-category-bar" aria-label="Mobile product categories">
+          <button
+            type="button"
+            className={selectedCategory === "All" ? "is-active" : ""}
+            onClick={() => {
+              setSelectedCategory("All");
+              setMobileCategoryMenuOpen(false);
+            }}
+          >
+            All
+          </button>
+
+          <div className="mobile-category-menu" ref={mobileCategoryMenuRef}>
+            <button
+              type="button"
+              className={selectedCategory !== "All" ? "is-active" : ""}
+              onClick={() => setMobileCategoryMenuOpen((open) => !open)}
+              aria-expanded={mobileCategoryMenuOpen}
+            >
+              Categories
+            </button>
+
+            {mobileCategoryMenuOpen && (
+              <div className="mobile-category-menu__popup" role="menu" aria-label="Categories popup">
+                {mobileCategoryOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    role="menuitem"
+                    className={selectedCategory === option ? "is-active" : ""}
+                    onClick={() => handleMobileCategoryChoice(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
         {imageMatchText && (
           <div className="catalog-match-banner">{imageMatchText}</div>

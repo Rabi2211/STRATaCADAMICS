@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import CookieConsent from "./components/CookieConsent";
 import { canAccessDashboardRoute, getCurrentSession, getPostLoginPath } from "./lib/auth";
 
 function ProtectedDashboardRoute({ path, children }: { path: string; children: ReactNode }) {
@@ -101,6 +102,7 @@ export default function App() {
         <Route path="/studio" element={<Navigate to="/studio/overview" replace />} />
         <Route path="/pages" element={<PageIndex />} />
       </Routes>
+      <CookieConsent />
     </Suspense>
   );
 }

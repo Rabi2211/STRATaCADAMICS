@@ -89,8 +89,10 @@ export default function StoreHeader() {
       return;
     }
 
-    const originalOverflow = document.body.style.overflow;
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -100,7 +102,8 @@ export default function StoreHeader() {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isAuthOpen]);
@@ -291,17 +294,22 @@ export default function StoreHeader() {
                   key={role}
                   type="button"
                   className={selectedRole === role ? "is-active" : ""}
-                  onClick={() => setSelectedRole(role)}
+                  onClick={() => {
+                    setSelectedRole(role);
+                    if (role === "brand-owner") setAuthMode("login");
+                  }}
                 >
                   {roleLabel[role]}
                 </button>
               ))}
             </div>
 
-            <div className="auth-mode-switch" aria-label="Authentication mode">
-              <button type="button" className={authMode === "login" ? "is-active" : ""} onClick={() => setAuthMode("login")}>Login</button>
-              <button type="button" className={authMode === "register" ? "is-active" : ""} onClick={() => setAuthMode("register")}>Register</button>
-            </div>
+            {selectedRole !== "brand-owner" && (
+              <div className="auth-mode-switch" aria-label="Authentication mode">
+                <button type="button" className={authMode === "login" ? "is-active" : ""} onClick={() => setAuthMode("login")}>Login</button>
+                <button type="button" className={authMode === "register" ? "is-active" : ""} onClick={() => setAuthMode("register")}>Register</button>
+              </div>
+            )}
 
             <form className="auth-form" onSubmit={handleSubmit}>
               <label>

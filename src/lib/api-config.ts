@@ -9,10 +9,6 @@ export function resolveApiBaseUrl(
 ): string {
   const trimmedUrl = configuredUrl?.trim();
 
-  if (trimmedUrl) {
-    return trimmedUrl.replace(/\/+$/, "");
-  }
-
   const currentLocation =
     locationOverride ??
     (typeof window !== "undefined"
@@ -22,11 +18,29 @@ export function resolveApiBaseUrl(
         }
       : undefined);
 
-  if (
-    currentLocation?.hostname &&
-    currentLocation.hostname !== "localhost" &&
-    currentLocation.hostname !== "127.0.0.1"
-  ) {
+  const isLocalHostname = (hostname?: string): boolean => {
+    if (!hostname) {
+      return false;
+    }
+
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost");
+  };
+
+  if (trimmedUrl) {
+    let configuredHostname: string | undefined;
+
+    try {
+      configuredHostname = new URL(trimmedUrl).hostname;
+    } catch {
+      configuredHostname = undefined;
+    }
+
+    if (!(isLocalHostname(configuredHostname) && currentLocation && !isLocalHostname(currentLocation.hostname))) {
+      return trimmedUrl.replace(/\/+$/, "");
+    }
+  }
+
+  if (currentLocation?.hostname && !isLocalHostname(currentLocation.hostname)) {
     return (currentLocation.origin ?? `https://${currentLocation.hostname}`).replace(/\/+$/, "");
   }
 

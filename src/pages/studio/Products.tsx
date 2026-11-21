@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
+import { saveProducts, subscribeToProducts } from "../../lib/product-store";
+import { subscribeToBrands } from "../../lib/brand-store";
 import {
   createProduct,
   deleteProduct,
@@ -33,6 +35,8 @@ export default function StudioProducts() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [productSort, setProductSort] = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     let active = true;
@@ -45,6 +49,7 @@ export default function StudioProducts() {
           return;
         }
 
+        saveProducts(nextProducts);
         setBrands(nextBrands);
         setProducts(nextProducts.map((product) => mapApiProduct(product)));
         setSelectedBrandId((current) => current || nextBrands[0]?.id || "");
@@ -60,13 +65,33 @@ export default function StudioProducts() {
     };
 
     void loadData();
-    return () => { active = false; };
+
+    const unsubscribe = subscribeToProducts((nextProducts) => {
+      setProducts(nextProducts.map((product) => mapApiProduct(product)));
+    });
+
+    const brandUnsubscribe = subscribeToBrands((nextBrands) => {
+      setBrands(nextBrands);
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+      brandUnsubscribe();
+    };
   }, []);
 
   const brand = brands.find((item) => item.id === selectedBrandId) ?? brands[0];
   const brandProducts = [...products.filter((product) => product.brandId === selectedBrandId)].sort((a, b) =>
     productSort === "asc" ? a.available - b.available : b.available - a.available,
   );
+  const totalPages = Math.max(1, Math.ceil(brandProducts.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedBrandProducts = brandProducts.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBrandId, productSort]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -104,10 +129,14 @@ export default function StudioProducts() {
 
       if (editingId) {
         const updated = await updateProduct(editingId, payload);
-        setProducts((current) => current.map((item) => (item.id === editingId ? mapApiProduct(updated) : item)));
+        const nextProducts = products.map((item) => (item.id === editingId ? mapApiProduct(updated) : item));
+        setProducts(nextProducts);
+        saveProducts(nextProducts);
       } else {
         const created = await createProduct(payload);
-        setProducts((current) => [mapApiProduct(created), ...current]);
+        const nextProducts = [mapApiProduct(created), ...products];
+        setProducts(nextProducts);
+        saveProducts(nextProducts);
       }
 
       resetForm();
@@ -135,7 +164,9 @@ export default function StudioProducts() {
     try {
       setError(null);
       await deleteProduct(productId);
-      setProducts((current) => current.filter((item) => item.id !== productId));
+      const nextProducts = products.filter((item) => item.id !== productId);
+      setProducts(nextProducts);
+      saveProducts(nextProducts);
       if (editingId === productId) {
         resetForm();
       }
@@ -247,7 +278,7 @@ export default function StudioProducts() {
                 <th>STATUS</th>
                 <th>ACTIONS</th>
               </tr>
-              {brandProducts.map((product) => (
+              {paginatedBrandProducts.map((product) => (
                 <tr key={product.id}>
                   <td>
                     <span className={`thumb ${product.imageClass}`} />
@@ -271,10 +302,41 @@ export default function StudioProducts() {
           </table>
         </div>
         <div className="pager">
-          <span>Showing 1–{brandProducts.length} of {brandProducts.length} products</span>
           <span>
-            <span className="on">1</span>
+            {brandProducts.length === 0
+              ? "Showing 0 of 0 products"
+              : `Showing ${((safeCurrentPage - 1) * pageSize) + 1}–${Math.min(safeCurrentPage * pageSize, brandProducts.length)} of ${brandProducts.length} products`}
           </span>
+          {brandProducts.length > 0 && (
+            <span>
+              <button
+                type="button"
+                className="btn"
+                disabled={safeCurrentPage === 1}
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  className={page === safeCurrentPage ? "on" : "btn"}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="btn"
+                disabled={safeCurrentPage === totalPages}
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              >
+                Next
+              </button>
+            </span>
+          )}
         </div>
       </section>
     </DashboardLayout>

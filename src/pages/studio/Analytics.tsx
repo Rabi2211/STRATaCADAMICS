@@ -1,23 +1,30 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
-import { fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
+import { fetchBrands, fetchOverviewAnalytics, fetchProducts, mapApiProduct, type ApiBrand, type ApiOverviewAnalytics } from "../../lib/store-api";
+import { formatPercentageChange } from "../../lib/live-metrics";
 import "./Analytics.css";
 
 export default function StudioAnalytics() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
   const [dateRange, setDateRange] = useState<"7D" | "30D">("7D");
+  const [liveAnalytics, setLiveAnalytics] = useState<ApiOverviewAnalytics | null>(null);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       try {
-        const [nextBrands, nextProducts] = await Promise.all([fetchBrands(), fetchProducts()]);
+        const [nextBrands, nextProducts, nextAnalytics] = await Promise.all([
+          fetchBrands(),
+          fetchProducts(),
+          fetchOverviewAnalytics({ range: dateRange }),
+        ]);
         if (!active) return;
         setBrands(nextBrands);
         setProducts(nextProducts.map((product) => mapApiProduct(product)));
+        setLiveAnalytics(nextAnalytics);
       } catch (error) {
         if (active) console.error("Unable to load studio analytics", error);
       }
@@ -27,13 +34,14 @@ export default function StudioAnalytics() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [dateRange]);
 
-  const multiplier = dateRange === "7D" ? 1 : 2.8;
-  const soldRevenue = products.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0) * multiplier;
-  const totalOrders = products.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0) * Math.round(multiplier);
-  const productViews = products.reduce((sum, product) => sum + Math.max(1200, Math.round(product.available * 38)), 0) * Math.round(multiplier);
-  const conversionRate = totalOrders / Math.max(1, productViews) * 100;
+  const soldRevenue = liveAnalytics?.grossSales ?? 0;
+  const totalOrders = liveAnalytics?.totalOrders ?? 0;
+  const productViews = liveAnalytics?.productViews ?? 0;
+  const conversionRate = productViews ? (totalOrders / productViews) * 100 : 0;
+  const chartPoints = liveAnalytics?.chart?.[0]?.points ?? [];
+  const chartMax = Math.max(...chartPoints, 1);
 
   return (
     <DashboardLayout
@@ -58,9 +66,8 @@ export default function StudioAnalytics() {
           <div>
             <span>Gross sales</span>
             <b>R{soldRevenue.toLocaleString()}</b>
-            <span className="up">▲ +12.6%</span>
-            {" "}
-            <span>vs. previous 7 days</span>
+            <span className={liveAnalytics && liveAnalytics.growth.grossSales >= 0 ? "up" : "down"}>{formatPercentageChange(liveAnalytics?.growth.grossSales ?? 0)}</span>
+            <span>vs. previous period</span>
           </div>
         </div>
         <div className="card stat">
@@ -68,9 +75,8 @@ export default function StudioAnalytics() {
           <div>
             <span>Orders</span>
             <b>{totalOrders}</b>
-            <span className="up">▲ +18.4%</span>
-            {" "}
-            <span>vs. previous 7 days</span>
+            <span className={liveAnalytics && liveAnalytics.growth.totalOrders >= 0 ? "up" : "down"}>{formatPercentageChange(liveAnalytics?.growth.totalOrders ?? 0)}</span>
+            <span>vs. previous period</span>
           </div>
         </div>
         <div className="card stat">
@@ -78,9 +84,7 @@ export default function StudioAnalytics() {
           <div>
             <span>Product views</span>
             <b>{productViews.toLocaleString()}</b>
-            <span className="up">▲ +24.7%</span>
-            {" "}
-            <span>vs. previous 7 days</span>
+            <span>server tracked</span>
           </div>
         </div>
         <div className="card stat">
@@ -88,9 +92,7 @@ export default function StudioAnalytics() {
           <div>
             <span>Conversion rate</span>
             <b>{conversionRate.toFixed(2)}%</b>
-            <span className="up">▲ +0.8 pp</span>
-            {" "}
-            <span>vs. previous 7 days</span>
+            <span>orders / views</span>
           </div>
         </div>
       </div>
@@ -105,15 +107,12 @@ export default function StudioAnalytics() {
           </span>
         </h3>
         <svg className="chart" viewBox="0 0 640 216">
-          <polygon points="40,180 40,138 137,130 233,119 330,122 427,89 523,76 620,33 620,180" fill="#c4664a" opacity=".15" />
-          <polyline points="40,138 137,130 233,119 330,122 427,89 523,76 620,33" fill="none" stroke="#c4664a" strokeWidth="2" />
-          <circle cx="40" cy="138" r="3.5" fill="#c4664a" />
-          <circle cx="137" cy="130" r="3.5" fill="#c4664a" />
-          <circle cx="233" cy="119" r="3.5" fill="#c4664a" />
-          <circle cx="330" cy="122" r="3.5" fill="#c4664a" />
-          <circle cx="427" cy="89" r="3.5" fill="#c4664a" />
-          <circle cx="523" cy="76" r="3.5" fill="#c4664a" />
-          <circle cx="620" cy="33" r="3.5" fill="#c4664a" />
+          {chartPoints.map((point, index) => {
+            const x = chartPoints.length === 1 ? 320 : 40 + (index / (chartPoints.length - 1)) * 580;
+            const y = 180 - (point / chartMax) * 140;
+            return <circle key={index} cx={x} cy={y} r="3.5" fill="#c4664a" />;
+          })}
+          {chartPoints.length > 0 && <polyline points={chartPoints.map((point, index) => `${chartPoints.length === 1 ? 320 : 40 + (index / (chartPoints.length - 1)) * 580},${180 - (point / chartMax) * 140}`).join(" ")} fill="none" stroke="#c4664a" strokeWidth="2" />}
         </svg>
       </section>
       <div className="grid g2">

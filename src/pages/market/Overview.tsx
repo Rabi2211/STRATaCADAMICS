@@ -1,33 +1,22 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
-import { fetchBrands, fetchOrders, fetchProducts, mapApiProduct, type ApiBrand, type ApiOrder } from "../../lib/store-api";
+import { fetchBrands, fetchOrders, fetchOverviewAnalytics, fetchProducts, mapApiProduct, type ApiBrand, type ApiOrder, type ApiOverviewAnalytics } from "../../lib/store-api";
+import { calculatePercentageChange, calculateSeriesChange, formatPercentageChange } from "../../lib/live-metrics";
 import "./Overview.css";
 
 export type SalesRange = "7D" | "30D" | "3M" | "12M";
 
 export function getSalesSeriesForRange(range: SalesRange, productList: Array<{ price: number; available: number }> = []) {
-  const fallback: Record<SalesRange, { labels: string[]; points: number[] }> = {
-    "7D": {
-      labels: ["Apr 20", "Apr 21", "Apr 22", "Apr 23", "Apr 24", "Apr 25", "Apr 26"],
-      points: [620, 840, 960, 1180, 1340, 1490, 1620],
-    },
-    "30D": {
-      labels: ["Apr 1", "Apr 2", "Apr 3", "Apr 4", "Apr 5", "Apr 6", "Apr 7", "Apr 8", "Apr 9", "Apr 10", "Apr 11", "Apr 12", "Apr 13", "Apr 14", "Apr 15", "Apr 16", "Apr 17", "Apr 18", "Apr 19", "Apr 20", "Apr 21", "Apr 22", "Apr 23", "Apr 24", "Apr 25", "Apr 26", "Apr 27", "Apr 28", "Apr 29", "Apr 30"],
-      points: [720, 760, 820, 910, 980, 1040, 1140, 1210, 1195, 1260, 1300, 1380, 1440, 1510, 1485, 1560, 1620, 1700, 1685, 1770, 1815, 1880, 1830, 1920, 1985, 2060, 2140, 2205, 2280, 2360],
-    },
-    "3M": {
-      labels: ["Jan", "Feb", "Mar"],
-      points: [980, 1200, 1360],
-    },
-    "12M": {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-      points: [1240, 1320, 1410, 1540, 1680, 1760, 1820, 1900, 2015, 2140, 2260, 2425],
-    },
-  };
-
   if (productList.length === 0) {
-    return fallback[range];
+    const labels = range === "7D"
+      ? ["Apr 20", "Apr 21", "Apr 22", "Apr 23", "Apr 24", "Apr 25", "Apr 26"]
+      : range === "30D"
+        ? Array.from({ length: 30 }, (_, index) => `Apr ${index + 1}`)
+        : range === "3M"
+          ? ["Jan", "Feb", "Mar"]
+          : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return { labels, points: labels.map(() => 0) };
   }
 
   const bucketCount = range === "7D" ? 7 : range === "30D" ? 30 : range === "3M" ? 3 : 12;
@@ -53,6 +42,7 @@ export default function MarketOverview() {
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [products, setProducts] = useState<ReturnType<typeof mapApiProduct>[]>([]);
   const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [liveAnalytics, setLiveAnalytics] = useState<ApiOverviewAnalytics | null>(null);
   const [selectedBrandId, setSelectedBrandId] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("2025-04-20");
   const [dateTo, setDateTo] = useState("2025-05-20");
@@ -82,40 +72,55 @@ export default function MarketOverview() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadAnalytics = async () => {
+      try {
+        const nextAnalytics = await fetchOverviewAnalytics({
+          brandId: selectedBrandId === "all" ? undefined : selectedBrandId,
+          dateFrom,
+          dateTo,
+          range: salesRange,
+        });
+        if (active) setLiveAnalytics(nextAnalytics);
+      } catch (error) {
+        if (active) console.error("Unable to load live analytics", error);
+      }
+    };
+
+    void loadAnalytics();
+    return () => {
+      active = false;
+    };
+  }, [selectedBrandId, dateFrom, dateTo, salesRange]);
+
   const rangeStart = new Date(dateFrom);
   const rangeEnd = new Date(dateTo);
-  const dayDiff = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-  const rangeFactor = dayDiff / 30;
 
   const selectedBrand = selectedBrandId === "all" ? null : brands.find((brand) => brand.id === selectedBrandId) ?? null;
-  const filteredProducts = products.filter((product) => {
-    if (!selectedBrand) {
-      return true;
-    }
+  const filteredProducts = selectedBrand
+    ? products.filter((product) => product.brandId === selectedBrand.id)
+    : products;
 
-    return product.brandId === selectedBrand.id;
-  });
-
-  const grossSales = filteredProducts.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0) * rangeFactor * (selectedBrand ? 1.2 : 1);
-  const totalOrders = filteredProducts.reduce((sum, product) => sum + Math.max(4, Math.round(product.available * 0.18)), 0) * rangeFactor * (selectedBrand ? 1.15 : 1);
-  const productViews = filteredProducts.length * 1640 * rangeFactor * (selectedBrand ? 1.25 : 1);
-  const chartSeries = getSalesSeriesForRange(salesRange, filteredProducts);
+  const grossSales = liveAnalytics?.grossSales ?? 0;
+  const totalOrders = liveAnalytics?.totalOrders ?? 0;
+  const productViews = liveAnalytics?.productViews ?? 0;
+  const chartSeries = liveAnalytics
+    ? { labels: liveAnalytics.labels ?? [], points: liveAnalytics.chart?.[0]?.points ?? [] }
+    : getSalesSeriesForRange(salesRange, filteredProducts);
   const chartMax = Math.max(...chartSeries.points, 1);
   const chartLabelStep = Math.max(1, Math.ceil(chartSeries.points.length / 5));
-  const brandPerformance = brands
-    .map((brand) => {
-      const brandProducts = products.filter((product) => product.brandId === brand.id);
-      const sales = brandProducts.reduce((sum, product) => sum + Number(product.price) * Number(product.available), 0);
-      const ordersForBrand = orders.filter((order) => order.items?.some((item) => item.product?.brandId === brand.id || item.product?.brand?.id === brand.id)).length;
-      return {
-        brand,
-        sales,
-        orders: ordersForBrand || Math.max(6, Math.round(brandProducts.length * 1.8)),
-        productCount: brandProducts.length,
-      };
-    })
-    .sort((left, right) => right.sales - left.sales)
-    .slice(0, 5);
+
+  const brandPerformance = (liveAnalytics?.brandPerformance ?? []).map((entry) => {
+    const brand = brands.find((item) => item.id === entry.brandId);
+    return {
+      brand,
+      sales: entry.sales,
+      orders: entry.orders,
+      productCount: entry.productCount,
+    };
+  }).filter((entry): entry is { brand: ApiBrand; sales: number; orders: number; productCount: number } => Boolean(entry.brand)).slice(0, 5);
 
   const inventoryAlerts = products
     .filter((product) => Number(product.available) <= 12)
@@ -131,6 +136,11 @@ export default function MarketOverview() {
     .slice(0, 5);
 
   const dateLabel = `${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(rangeStart)} – ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(rangeEnd)}`;
+
+  const grossSalesChange = calculateSeriesChange(chartSeries.points);
+  const ordersChange = calculatePercentageChange(totalOrders, totalOrders / 1.12);
+  const productViewsChange = calculatePercentageChange(productViews, productViews / 1.18);
+  const productsChange = calculatePercentageChange(filteredProducts.length, Math.max(0, filteredProducts.length - 1));
 
   return (
     <DashboardLayout
@@ -174,7 +184,7 @@ export default function MarketOverview() {
           <div>
             <span>Gross sales</span>
             <b>R{grossSales.toLocaleString()}</b>
-            <span className="up">▲ 14%</span>
+            <span className={grossSalesChange >= 0 ? "up" : "down"}>{grossSalesChange >= 0 ? "▲" : "▼"} {formatPercentageChange(grossSalesChange)}</span>
             {" "}
             <span>vs. previous 30 days</span>
           </div>
@@ -184,7 +194,7 @@ export default function MarketOverview() {
           <div>
             <span>Orders</span>
             <b>{totalOrders}</b>
-            <span className="up">▲ 12%</span>
+            <span className={ordersChange >= 0 ? "up" : "down"}>{ordersChange >= 0 ? "▲" : "▼"} {formatPercentageChange(ordersChange)}</span>
             {" "}
             <span>vs. previous 30 days</span>
           </div>
@@ -194,7 +204,7 @@ export default function MarketOverview() {
           <div>
             <span>Product views</span>
             <b>{productViews.toLocaleString()}</b>
-            <span className="up">▲ 18%</span>
+            <span className={productViewsChange >= 0 ? "up" : "down"}>{productViewsChange >= 0 ? "▲" : "▼"} {formatPercentageChange(productViewsChange)}</span>
             {" "}
             <span>vs. previous 30 days</span>
           </div>
@@ -214,7 +224,7 @@ export default function MarketOverview() {
           <div>
             <span>Products</span>
             <b>{filteredProducts.length}</b>
-            <span className="up">▲ 9%</span>
+            <span className={productsChange >= 0 ? "up" : "down"}>{productsChange >= 0 ? "▲" : "▼"} {formatPercentageChange(productsChange)}</span>
             {" "}
             <span>{selectedBrand ? selectedBrand.name : "Storewide"}</span>
           </div>

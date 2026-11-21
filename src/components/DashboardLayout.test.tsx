@@ -7,7 +7,7 @@ import { MemoryRouter } from "react-router-dom";
 import DashboardLayout from "./DashboardLayout";
 
 describe("DashboardLayout", () => {
-  it("hides the toolbar while scrolling down the page", () => {
+  it("keeps the toolbar visible while scrolling down the page", () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -40,7 +40,7 @@ describe("DashboardLayout", () => {
       window.dispatchEvent(new Event("scroll"));
     });
 
-    expect(head?.classList.contains("head--hidden")).toBe(true);
+    expect(head?.classList.contains("head--hidden")).toBe(false);
 
     act(() => {
       root.unmount();

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { NAV, type Kind } from "../data/nav";
 import "../styles/dashboard.css";
@@ -13,20 +13,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ kind, title, subtitle, actions, children }: DashboardLayoutProps) {
   const { label, tagline, items } = NAV[kind];
-  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const shouldHide = currentScrollY > lastScrollY.current && currentScrollY > 40;
-      setIsHeaderHidden(shouldHide);
-      lastScrollY.current = currentScrollY;
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="dash">
@@ -36,11 +23,36 @@ export default function DashboardLayout({ kind, title, subtitle, actions, childr
             STRATA<i />
           </div>
           <small>{label}</small>
-          {items.map((item) => (
-            <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? "on" : undefined)}>
-              {item.label}
-            </NavLink>
-          ))}
+          <button
+            type="button"
+            className="mobile-menu-button"
+            aria-label="Open navigation menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+          <nav className={`mobile-menu${menuOpen ? " open" : ""}`} aria-label="Dashboard navigation">
+            {items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => (isActive ? "on" : undefined)}
+                onClick={() => setMenuOpen(false)}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="desktop-nav">
+            {items.map((item) => (
+              <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? "on" : undefined)}>
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
           <div className="tag">
             {tagline.map((line, i) => (
               <span key={line}>
@@ -51,7 +63,7 @@ export default function DashboardLayout({ kind, title, subtitle, actions, childr
           </div>
         </aside>
         <main className="main">
-          <div className={`head ${isHeaderHidden ? "head--hidden" : ""}`}>
+          <div className="head">
             <div>
               <h1>{title}</h1>
               {subtitle && <p>{subtitle}</p>}

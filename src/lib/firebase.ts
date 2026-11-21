@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -45,5 +46,6 @@ export const firebaseApp = isBrowserRuntime && isFirebaseConfigured()
   : null;
 
 export const auth = firebaseApp ? getFirebaseService(() => getAuth(firebaseApp)) : null;
+export const db = firebaseApp ? getFirebaseService(() => getFirestore(firebaseApp)) : null;
 export const storage = firebaseApp ? getFirebaseService(() => getStorage(firebaseApp)) : null;
 export const analytics = firebaseApp ? getFirebaseService(() => getAnalytics(firebaseApp)) : null;

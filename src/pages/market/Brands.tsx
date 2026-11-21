@@ -1,12 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { getCurrentSession, registerUser } from "../../lib/auth";
+import { saveAuthSession } from "../../lib/storage";
 import DashboardLayout from "../../components/DashboardLayout";
 import { createBrand, fetchBrands, fetchProducts, mapApiProduct, type ApiBrand } from "../../lib/store-api";
+import { subscribeToBrands } from "../../lib/brand-store";
 import "./Brands.css";
 
 const emptyBrandForm = () => ({
   name: "",
   email: "",
+  password: "",
+  fullName: "",
   description: "",
 });
 
@@ -36,8 +41,17 @@ export default function MarketBrands() {
     };
 
     void load();
+
+    const unsubscribe = subscribeToBrands((nextBrands) => {
+      if (active) {
+        setBrands(nextBrands);
+        setSelectedBrandId((current) => current || nextBrands[0]?.id || "");
+      }
+    });
+
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
@@ -52,24 +66,51 @@ export default function MarketBrands() {
     event.preventDefault();
 
     const name = brandDraft.name.trim();
+    const email = brandDraft.email.trim();
+    const password = brandDraft.password;
+    const ownerName = brandDraft.fullName.trim();
+
     if (!name) {
       setBrandError("Brand name is required.");
       return;
     }
+    if (!ownerName || !email || !password) {
+      setBrandError("Owner name, email, and password are required.");
+      return;
+    }
+
+    const adminSession = getCurrentSession();
 
     try {
-      const nextBrand = await createBrand({
-        name,
-        description: brandDraft.description || "New brand created from the owner account.",
+      const ownerSession = await registerUser({
+        email,
+        password,
+        name: ownerName,
+        role: "brand-owner",
       });
 
-      setBrands((current) => [{ ...nextBrand, owner: nextBrand.owner ?? { id: "owner", email: brandDraft.email || "owner@strata.app", name: "Store owner", role: "Brand" } }, ...current]);
+      const nextBrand = await createBrand({
+        name,
+        description: brandDraft.description || "New brand created through the brand-owner registration form.",
+      });
+
+      if (adminSession) saveAuthSession(adminSession);
+
+      setBrands((current) => [{
+        ...nextBrand,
+        owner: {
+          id: ownerSession.user.id,
+          email: ownerSession.user.email,
+          name: ownerSession.user.name,
+          role: "brand-owner",
+        },
+      }, ...current]);
       setSelectedBrandId(nextBrand.id);
       setShowBrandForm(false);
       setBrandDraft(emptyBrandForm());
       setBrandError("");
     } catch (error) {
-      setBrandError(error instanceof Error ? error.message : "Unable to create brand.");
+      setBrandError(error instanceof Error ? error.message : "Unable to register brand owner and create brand.");
     }
   };
 
@@ -91,16 +132,24 @@ export default function MarketBrands() {
     >
       {showBrandForm && (
         <form className="card" onSubmit={handleBrandSubmit} style={{ marginBottom: 18 }}>
-          <h3>Add brand</h3>
+          <h3>Register brand owner and add brand</h3>
           {brandError && <p className="auth-error">{brandError}</p>}
           <div className="grid g2">
             <label className="field">
-              <span>Brand name</span>
+              <span>Brand name *</span>
               <input value={brandDraft.name} onChange={(event) => setBrandDraft((current) => ({ ...current, name: event.target.value }))} />
             </label>
             <label className="field">
-              <span>Brand email</span>
+              <span>Owner full name *</span>
+              <input value={brandDraft.fullName} onChange={(event) => setBrandDraft((current) => ({ ...current, fullName: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Owner email *</span>
               <input type="email" value={brandDraft.email} onChange={(event) => setBrandDraft((current) => ({ ...current, email: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Owner password *</span>
+              <input type="password" value={brandDraft.password} onChange={(event) => setBrandDraft((current) => ({ ...current, password: event.target.value }))} />
             </label>
           </div>
           <label className="field">
@@ -108,7 +157,7 @@ export default function MarketBrands() {
             <textarea value={brandDraft.description} onChange={(event) => setBrandDraft((current) => ({ ...current, description: event.target.value }))} />
           </label>
           <div style={{ display: "flex", gap: 10 }}>
-            <button className="btn pri" type="submit">Save brand</button>
+            <button className="btn pri" type="submit">Register owner & add brand</button>
             <button className="btn" type="button" onClick={() => { setShowBrandForm(false); setBrandError(""); }}>Cancel</button>
           </div>
         </form>

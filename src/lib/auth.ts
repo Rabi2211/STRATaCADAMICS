@@ -1,6 +1,7 @@
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { resolveApiBaseUrl } from "./api-config";
-import { auth, isFirebaseConfigured } from "./firebase";
+import { db, auth, isFirebaseConfigured } from "./firebase";
 import { clearAuthSession, getStoredAuthSession, saveAuthSession, type AuthSession } from "./storage";
 
 export type AuthUser = {
@@ -173,10 +174,23 @@ async function createFirebaseSession(input: AuthRequestBody, mode: "login" | "re
 
     const requestedName = input.name?.trim() || input.email.split("@")[0] || "User";
 
-    if (mode === "register" && credentials.user.displayName !== requestedName) {
-      await updateProfile(credentials.user, { displayName: requestedName });
+    if (mode === "register") {
+      if (credentials.user.displayName !== requestedName) {
+        await updateProfile(credentials.user, { displayName: requestedName });
+      }
+      await sendEmailVerification(credentials.user);
+      await signOut(auth);
+      throw new Error("Please verify your email address using the link we sent, then log in.");
     }
 
+    await credentials.user.reload();
+    if (!credentials.user.emailVerified) {
+      await sendEmailVerification(credentials.user);
+      await signOut(auth);
+      throw new Error("A verification email was sent. Verify your email address, then sign in again.");
+    }
+
+    const trustedRole = await getVerifiedProfileRole(credentials.user, input.role ?? "customer");
     const token = await credentials.user.getIdToken();
     const session: AuthSession = {
       token,
@@ -184,7 +198,7 @@ async function createFirebaseSession(input: AuthRequestBody, mode: "login" | "re
         id: credentials.user.uid,
         email: credentials.user.email ?? input.email,
         name: credentials.user.displayName || requestedName,
-        role: sessionRole(input.role ?? "customer"),
+        role: sessionRole(trustedRole),
       },
     };
 
@@ -199,7 +213,8 @@ export async function registerUser(input: AuthRequestBody): Promise<AuthSession>
   const role = getRoleForAuth(input.role ?? "customer");
 
   if (auth && isFirebaseConfigured()) {
-    return createFirebaseSession({ ...input, role }, "register");
+    await createFirebaseSession({ ...input, role }, "register");
+    throw new Error("Please verify your email address using the link we sent, then log in.");
   }
 
   const payload = await requestJson<AuthSession>("/api/auth/register", {
@@ -263,4 +278,34 @@ export async function logOut() {
   }
 
   clearAuthSession();
+}
+
+function getProfileRole(profile: unknown): string {
+  if (typeof profile !== "object" || profile === null || !("role" in profile)) {
+    return "customer";
+  }
+
+  const role = (profile as { role?: unknown }).role;
+  return typeof role === "string" ? sessionRole(role) : "customer";
+}
+
+async function getVerifiedProfileRole(firebaseUser: import("firebase/auth").User, requestedRole: string): Promise<string> {
+  if (!db) {
+    return getRoleForAuth(requestedRole);
+  }
+
+  const profileRef = doc(db, "userProfiles", firebaseUser.uid);
+  const profileSnapshot = await getDoc(profileRef);
+
+  if (!profileSnapshot.exists()) {
+    await setDoc(profileRef, {
+      email: firebaseUser.email ?? "",
+      name: firebaseUser.displayName ?? "",
+      role: "customer",
+      createdAt: new Date().toISOString(),
+    });
+    return "customer";
+  }
+
+  return getProfileRole(profileSnapshot.data());
 }

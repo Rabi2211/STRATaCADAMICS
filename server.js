@@ -96,89 +96,14 @@ function validatePaymentCallbackPayload(input) {
   return { ok: true, provider, orderId, status };
 }
 
-const brands = [
-  {
-    id: "brand-atelier",
-    name: "Strata Atelier",
-    description: "Signature essentials and elevated layers.",
-    accent: "#c4664a",
-    abbreviation: "SA",
-    owner: { id: "owner-1", email: "owner@strata.app", name: "Store Owner", role: "admin" },
-    products: [],
-  },
-  {
-    id: "brand-vesa",
-    name: "Vesa Studio",
-    description: "Sculptural silhouettes and refined basics.",
-    accent: "#4f6f52",
-    abbreviation: "VS",
-    owner: { id: "owner-2", email: "studio@strata.app", name: "Studio Lead", role: "manager" },
-    products: [],
-  },
-  {
-    id: "brand-joel",
-    name: "Joel Mercer",
-    description: "Luxury everyday staples and clean tailoring.",
-    accent: "#5f7db7",
-    abbreviation: "JM",
-    owner: { id: "owner-3", email: "mercer@strata.app", name: "Brand Lead", role: "editor" },
-    products: [],
-  },
-];
+const brands = [];
 
-const products = [
-  {
-    id: "prod-001",
-    brandId: "brand-atelier",
-    name: "Linen Knit Sweater",
-    sku: "LKS-2041",
-    category: "Sweaters",
-    price: 120,
-    available: 32,
-    status: "ACTIVE",
-    description: "A relaxed knit with premium linen texture and soft drape.",
-    imageClass: "t1",
-  },
-  {
-    id: "prod-002",
-    brandId: "brand-vesa",
-    name: "Structured Trench",
-    sku: "ST-1198",
-    category: "Outerwear",
-    price: 260,
-    available: 14,
-    status: "ACTIVE",
-    description: "Tailored outer layer with a clean shoulder and matte finish.",
-    imageClass: "t2",
-  },
-  {
-    id: "prod-003",
-    brandId: "brand-joel",
-    name: "Essential Oxford Shirt",
-    sku: "EO-8842",
-    category: "Shirts",
-    price: 145,
-    available: 9,
-    status: "LOW_STOCK",
-    description: "A crisp button-down in a soft cotton weave built for everyday use.",
-    imageClass: "t3",
-  },
-  {
-    id: "prod-004",
-    brandId: "brand-atelier",
-    name: "Wool Blend Zip",
-    sku: "WBZ-3007",
-    category: "Tops",
-    price: 170,
-    available: 0,
-    status: "DRAFT",
-    description: "A cozy mid-layer with subtle texture and warm structure.",
-    imageClass: "t4",
-  },
-];
+const products = [];
 
 const orders = [];
 const paymentCallbacks = [];
+const productViews = new Map();
+const authUsers = new Map();
 
 for (const brand of brands) {
   brand.products = products.filter((product) => product.brandId === brand.id);
@@ -238,6 +163,32 @@ const server = http.createServer(async (req, res) => {
 
   if (url === "/api/brands" && method === "GET") {
     sendJson(res, 200, { brands });
+    return;
+  }
+
+  if (url === "/api/brands" && method === "POST") {
+    try {
+      const input = await parseBody(req);
+      const name = String(input.name || "").trim();
+      if (!name) {
+        sendJson(res, 400, { error: "Brand name is required." });
+        return;
+      }
+
+      const brand = {
+        id: `brand-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name,
+        description: input.description ? String(input.description) : null,
+        accent: "#4f6f52",
+        abbreviation: name.slice(0, 2).toUpperCase(),
+        owner: { id: "owner-1", email: "owner@strata.app", name: "Store Owner", role: "admin" },
+        products: [],
+      };
+      brands.push(brand);
+      sendJson(res, 201, { brand });
+    } catch (error) {
+      sendJson(res, 400, { error: error instanceof Error ? error.message : "Unable to create brand." });
+    }
     return;
   }
 
@@ -410,6 +361,189 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 201, { product: created });
     } catch (error) {
       sendJson(res, 400, { error: error instanceof Error ? error.message : "Invalid product payload." });
+    }
+    return;
+  }
+
+  if (url.startsWith("/api/products/") && url.endsWith("/view") && method === "POST") {
+    const productId = decodeURIComponent(url.split("/")[3]);
+    if (!products.some((product) => product.id === productId)) {
+      sendJson(res, 404, { error: "Product not found." });
+      return;
+    }
+    productViews.set(productId, (productViews.get(productId) || 0) + 1);
+    sendJson(res, 200, { ok: true, views: productViews.get(productId) });
+    return;
+  }
+
+  if (url === "/api/analytics/views" && method === "GET") {
+    sendJson(res, 200, { views: Object.fromEntries(productViews) });
+    return;
+  }
+
+  if (url.startsWith("/api/analytics/overview") && method === "GET") {
+    const [, queryString = ""] = url.split("?");
+    const params = new URLSearchParams(queryString);
+    const brandId = params.get("brandId") || "";
+    const range = params.get("range") || "30D";
+    const fromValue = params.get("from");
+    const toValue = params.get("to");
+    const filteredProducts = brandId
+      ? products.filter((product) => product.brandId === brandId)
+      : products;
+
+    const start = fromValue ? new Date(`${fromValue}T00:00:00`) : null;
+    const end = toValue ? new Date(`${toValue}T23:59:59`) : null;
+    const filteredOrders = orders.filter((order) => {
+      if (!start || !end) return true;
+      const created = new Date(order.createdAt);
+      return created >= start && created <= end;
+    }).filter((order) => !brandId || order.items?.some((item) => item.product?.brandId === brandId));
+
+    const grossSales = filteredOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const totalOrders = filteredOrders.length;
+    const productViewsTotal = filteredProducts.reduce((sum, product) => sum + (productViews.get(product.id) || 0), 0);
+
+    const bucketCount = range === "7D" ? 7 : range === "30D" ? 30 : range === "3M" ? 3 : 12;
+    const chartBuckets = Array.from({ length: bucketCount }, () => 0);
+    const now = end && !Number.isNaN(end.getTime()) ? end : new Date();
+    for (const order of filteredOrders) {
+      const created = new Date(order.createdAt);
+      const ageDays = Math.max(0, Math.floor((now.getTime() - created.getTime()) / 86400000));
+      const index = Math.min(bucketCount - 1, bucketCount - 1 - Math.floor(ageDays / Math.max(1, Math.ceil(bucketCount === 30 ? 1 : (30 * bucketCount / bucketCount)) )));
+      chartBuckets[Math.max(0, index)] += Number(order.total || 0);
+    }
+
+    const labels = range === "7D"
+      ? Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(now.getTime() - (6 - index) * 86400000)))
+      : range === "30D"
+        ? Array.from({ length: 30 }, (_, index) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(now.getTime() - (29 - index) * 86400000)))
+        : range === "3M"
+          ? ["Month 1", "Month 2", "Month 3"]
+          : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const brandPerformance = brands
+      .filter((brand) => !brandId || brand.id === brandId)
+      .map((brand) => {
+        const brandProducts = filteredProducts.filter((product) => product.brandId === brand.id);
+        const brandOrders = filteredOrders.filter((order) => order.items?.some((item) => item.product?.brandId === brand.id));
+        return {
+          brandId: brand.id,
+          sales: brandOrders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+          orders: brandOrders.length,
+          productCount: brandProducts.length,
+        };
+      });
+
+    const previousStart = start ? new Date(start) : new Date(now.getTime() - 60 * 86400000);
+    const previousEnd = start ? new Date(start) : new Date(now.getTime() - 30 * 86400000);
+    const previousOrders = orders.filter((order) => {
+      const created = new Date(order.createdAt);
+      return created >= previousStart && created < previousEnd;
+    });
+    const previousSales = previousOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const percentage = (current, previous) => previous === 0 ? (current === 0 ? 0 : 100) : Math.round(((current - previous) / Math.abs(previous)) * 100);
+
+    sendJson(res, 200, {
+      grossSales,
+      totalOrders,
+      productViews: productViewsTotal,
+      chart: [{ label: range, points: chartBuckets }],
+      labels,
+      brandPerformance,
+      growth: {
+        grossSales: percentage(grossSales, previousSales),
+        totalOrders: percentage(totalOrders, previousOrders.length),
+        productViews: productViewsTotal,
+        products: filteredProducts.length,
+      },
+    });
+    return;
+  }
+
+  if (url === "/api/auth/register" && method === "POST") {
+    try {
+      const input = await parseBody(req);
+      const email = String(input.email || "").trim().toLowerCase();
+      const password = String(input.password || "");
+      const role = String(input.role || "CUSTOMER").trim().toUpperCase();
+      if (!email || password.length < 6) {
+        sendJson(res, 400, { error: "A valid email and password of at least 6 characters are required." });
+        return;
+      }
+      if (authUsers.has(email)) {
+        const existing = authUsers.get(email);
+        if (existing.password !== password) {
+          sendJson(res, 409, { error: "An account with this email already exists." });
+          return;
+        }
+        const normalizedRole = role === "BRAND_OWNER" ? "brand-owner" : role === "ADMIN" ? "admin" : "customer";
+        existing.user.role = normalizedRole;
+        existing.user.name = String(input.name || existing.user.name).trim();
+        if (normalizedRole === "brand-owner" && !brands.some((brand) => brand.owner?.email === email)) {
+          brands.push({
+            id: `brand-${randomUUID().slice(0, 8)}`,
+            name: String(input.name || "Eden Studio").trim(),
+            description: "Independent brand created through the Studio registration flow.",
+            accent: "#4f6f52",
+            abbreviation: "ES",
+            owner: { id: existing.user.id, email, name: existing.user.name, role: "brand-owner" },
+            products: [],
+          });
+        }
+        sendJson(res, 200, { token: `local-token-${existing.user.id}`, user: existing.user });
+        return;
+      }
+
+      const normalizedRole = role === "BRAND_OWNER" ? "brand-owner" : role === "ADMIN" ? "admin" : "customer";
+      const user = {
+        id: `user-${randomUUID().slice(0, 8)}`,
+        email,
+        name: String(input.name || email.split("@")[0]).trim(),
+        role: normalizedRole,
+      };
+      authUsers.set(email, { password, user });
+
+      if (normalizedRole === "brand-owner") {
+        const brandName = String(input.name || "Eden Studio").trim();
+        if (!brands.some((brand) => brand.owner?.email === email)) {
+          brands.push({
+            id: `brand-${randomUUID().slice(0, 8)}`,
+            name: brandName,
+            description: "Independent brand created through the Studio registration flow.",
+            accent: "#4f6f52",
+            abbreviation: brandName.slice(0, 2).toUpperCase(),
+            owner: { id: user.id, email, name: user.name, role: "brand-owner" },
+            products: [],
+          });
+        }
+      }
+
+      sendJson(res, 201, { token: `local-token-${user.id}`, user });
+    } catch (error) {
+      sendJson(res, 400, { error: error instanceof Error ? error.message : "Unable to register." });
+    }
+    return;
+  }
+
+  if (url === "/api/auth/login" && method === "POST") {
+    try {
+      const input = await parseBody(req);
+      const email = String(input.email || "").trim().toLowerCase();
+      const password = String(input.password || "");
+      const requestedRole = String(input.role || "CUSTOMER").trim().toUpperCase();
+      const record = authUsers.get(email);
+      if (!record || record.password !== password) {
+        sendJson(res, 401, { error: "Incorrect email or password." });
+        return;
+      }
+      if (requestedRole === "ADMIN") record.user.role = "admin";
+      if (requestedRole === "BRAND_OWNER") record.user.role = "brand-owner";
+      if (requestedRole === "CUSTOMER") record.user.role = "customer";
+
+      sendJson(res, 200, { token: `local-token-${record.user.id}`, user: record.user });
+    } catch (error) {
+      sendJson(res, 400, { error: error instanceof Error ? error.message : "Unable to sign in." });
     }
     return;
   }

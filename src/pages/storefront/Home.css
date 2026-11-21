@@ -183,6 +183,14 @@
   bottom: 22px;
   box-shadow: 0 12px 20px rgba(29, 26, 23, 0.12);
 }
+
+@media (orientation: portrait) and (max-height: 600px) {
+  .sf .hero {
+    height: 500px;
+    min-height: 500px;
+  }
+}
+
 .sf .promos {
   display: grid;
   grid-template-columns: 1fr 1fr;

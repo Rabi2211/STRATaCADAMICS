@@ -15,6 +15,15 @@ describe("api configuration", () => {
     ).toBe("https://stratacadamics.web.app");
   });
 
+  it("ignores a localhost backend URL when the app is running on a hosted site", () => {
+    expect(
+      resolveApiBaseUrl("http://localhost:4000", {
+        hostname: "stratacadamics.web.app",
+        origin: "https://stratacadamics.web.app",
+      })
+    ).toBe("https://stratacadamics.web.app");
+  });
+
   it("keeps localhost for local development", () => {
     expect(
       resolveApiBaseUrl(undefined, {

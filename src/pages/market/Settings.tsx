@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { fetchBrands, type ApiBrand } from "../../lib/store-api";
+import { fetchNewsletterCampaigns, sendNewsletterUpdate, type NewsletterCampaign } from "../../lib/newsletter-store";
+import { DEFAULT_STORE_SETTINGS, loadStoreSettings, saveStoreSettings } from "../../lib/store-settings";
 import "./Settings.css";
 
 const tabs = ["General", "Storefront", "Shipping", "Notifications", "Payments", "Team & permissions"] as const;
@@ -13,10 +15,7 @@ export default function MarketSettings() {
   const [shippingDraft, setShippingDraft] = useState("Free shipping on orders over R100. Ships within 2–5 business days.");
   const [shippingEditOpen, setShippingEditOpen] = useState(false);
   const [showRolePanel, setShowRolePanel] = useState(false);
-  const [teamMembers, setTeamMembers] = useState([
-    { id: "tm-1", name: "Maya Singh", role: "Admin" },
-    { id: "tm-2", name: "David Adebayo", role: "Store manager" },
-  ]);
+  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; role: string }>>([]);
   const [logoName, setLogoName] = useState("STRATA");
   const [notificationSettings, setNotificationSettings] = useState({
     orderConfirmations: true,
@@ -24,15 +23,23 @@ export default function MarketSettings() {
     orderDelivered: false,
     customerInquiries: true,
   });
+  const [newsletterSubject, setNewsletterSubject] = useState("");
+  const [newsletterContent, setNewsletterContent] = useState("");
+  const [sendingNewsletter, setSendingNewsletter] = useState(false);
+  const [newsletterCampaigns, setNewsletterCampaigns] = useState<NewsletterCampaign[]>([]);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       try {
-        const nextBrands = await fetchBrands();
+        const [nextBrands, nextSettings] = await Promise.all([fetchBrands(), loadStoreSettings()]);
         if (!active) return;
         setBrands(nextBrands);
+        setShippingDraft(nextSettings.shippingPolicy);
+        setNotificationSettings(nextSettings.notifications);
+        const campaignPayload = await fetchNewsletterCampaigns();
+        if (active) setNewsletterCampaigns(campaignPayload.campaigns);
       } catch (error) {
         if (active) {
           console.error("Unable to load store settings", error);
@@ -63,11 +70,21 @@ export default function MarketSettings() {
   };
 
   const toggleNotification = (key: keyof typeof notificationSettings) => {
-    setNotificationSettings((current) => ({
-      ...current,
-      [key]: !current[key],
-    }));
-    setNotice("Notification preferences updated.");
+    setNotificationSettings((current) => {
+      const next = { ...current, [key]: !current[key] };
+      void persistSettings({ notifications: next }).then(() => setNotice("Notification preferences updated."));
+      return next;
+    });
+  };
+
+  const persistSettings = async (patch: Partial<typeof DEFAULT_STORE_SETTINGS>) => {
+    try {
+      const current = await loadStoreSettings();
+      await saveStoreSettings({ ...current, ...patch });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to save store settings.");
+      throw error;
+    }
   };
 
   const renderTabContent = () => {
@@ -88,7 +105,7 @@ export default function MarketSettings() {
               <label>Shipping policy text</label>
               <textarea value={shippingDraft} onChange={(event) => setShippingDraft(event.target.value)} />
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <button type="button" className="btn pri" onClick={() => { setShippingEditOpen(false); setNotice("Shipping policy saved."); }}>Save policy</button>
+                <button type="button" className="btn pri" onClick={async () => { await persistSettings({ shippingPolicy: shippingDraft }); setShippingEditOpen(false); setNotice("Shipping policy saved."); }}>Save policy</button>
                 <button type="button" className="btn" onClick={() => setShippingEditOpen(false)}>Cancel</button>
               </div>
             </div>
@@ -98,38 +115,87 @@ export default function MarketSettings() {
     }
 
     if (activeTab === "Notifications") {
+      const handleSendNewsletter = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setSendingNewsletter(true);
+        setNotice("");
+        try {
+          const result = await sendNewsletterUpdate({ subject: newsletterSubject, content: newsletterContent });
+          setNotice(`Newsletter sent: ${result.sent} delivered, ${result.failed} failed.`);
+          setNewsletterSubject("");
+          setNewsletterContent("");
+          const campaignPayload = await fetchNewsletterCampaigns();
+          setNewsletterCampaigns(campaignPayload.campaigns);
+        } catch (sendError) {
+          setNotice(sendError instanceof Error ? sendError.message : "Unable to send newsletter.");
+        } finally {
+          setSendingNewsletter(false);
+        }
+      };
+
       return (
-        <section className="card ">
-          <h3>Customer notification preferences</h3>
-          <div className="row">
-            <span>
-              <b>Order confirmations</b>
-              <span className="sub">Send an email when an order is placed.</span>
-            </span>
-            <button type="button" className="toggle" aria-pressed={notificationSettings.orderConfirmations} onClick={() => toggleNotification("orderConfirmations")} aria-label="Toggle order confirmations" />
-          </div>
-          <div className="row">
-            <span>
-              <b>Shipping updates</b>
-              <span className="sub">Notify customers when their order ships.</span>
-            </span>
-            <button type="button" className="toggle" aria-pressed={notificationSettings.shippingUpdates} onClick={() => toggleNotification("shippingUpdates")} aria-label="Toggle shipping updates" />
-          </div>
-          <div className="row">
-            <span>
-              <b>Order delivered</b>
-              <span className="sub">Notify customers when their order is delivered.</span>
-            </span>
-            <button type="button" className="toggle" aria-pressed={notificationSettings.orderDelivered} onClick={() => toggleNotification("orderDelivered")} aria-label="Toggle order delivered notifications" />
-          </div>
-          <div className="row">
-            <span>
-              <b>Customer inquiries</b>
-              <span className="sub">Receive new customer messages via email.</span>
-            </span>
-            <button type="button" className="toggle" aria-pressed={notificationSettings.customerInquiries} onClick={() => toggleNotification("customerInquiries")} aria-label="Toggle customer inquiries" />
-          </div>
-        </section>
+        <>
+          <section className="card ">
+            <h3>Customer notification preferences</h3>
+            <div className="row">
+              <span><b>Order confirmations</b><span className="sub">Send an email when an order is placed.</span></span>
+              <button type="button" className="toggle" aria-pressed={notificationSettings.orderConfirmations} onClick={() => toggleNotification("orderConfirmations")} aria-label="Toggle order confirmations" />
+            </div>
+            <div className="row">
+              <span><b>Shipping updates</b><span className="sub">Notify customers when their order ships.</span></span>
+              <button type="button" className="toggle" aria-pressed={notificationSettings.shippingUpdates} onClick={() => toggleNotification("shippingUpdates")} aria-label="Toggle shipping updates" />
+            </div>
+            <div className="row">
+              <span><b>Order delivered</b><span className="sub">Notify customers when their order is delivered.</span></span>
+              <button type="button" className="toggle" aria-pressed={notificationSettings.orderDelivered} onClick={() => toggleNotification("orderDelivered")} aria-label="Toggle order delivered notifications" />
+            </div>
+            <div className="row">
+              <span><b>Customer inquiries</b><span className="sub">Receive new customer messages via email.</span></span>
+              <button type="button" className="toggle" aria-pressed={notificationSettings.customerInquiries} onClick={() => toggleNotification("customerInquiries")} aria-label="Toggle customer inquiries" />
+            </div>
+          </section>
+          <section className="card">
+            <h3>Send newsletter</h3>
+            <span className="sub">Send an update to all active newsletter subscribers.</span>
+            <form onSubmit={handleSendNewsletter}>
+              <div className="field" style={{ marginTop: 12 }}>
+                <label>Subject</label>
+                <input value={newsletterSubject} maxLength={150} onChange={(event) => setNewsletterSubject(event.target.value)} placeholder="New arrivals and store updates" required />
+              </div>
+              <div className="field">
+                <label>Message</label>
+                <textarea value={newsletterContent} maxLength={10000} onChange={(event) => setNewsletterContent(event.target.value)} placeholder="Write the newsletter message…" rows={8} required />
+              </div>
+              <button type="submit" className="btn pri" disabled={sendingNewsletter || !newsletterSubject.trim() || !newsletterContent.trim()}>
+                {sendingNewsletter ? "Sending…" : "Send newsletter"}
+              </button>
+            </form>
+          </section>
+          <section className="card">
+            <h3>Campaign history</h3>
+            <span className="sub">Recent newsletter sends and delivery totals.</span>
+            {newsletterCampaigns.length === 0 ? (
+              <p className="sub" style={{ marginTop: 12 }}>No campaigns sent yet.</p>
+            ) : (
+              <div className="wrap" style={{ marginTop: 12 }}>
+                <table>
+                  <thead><tr><th>Subject</th><th>Recipients</th><th>Sent</th><th>Failed</th><th>Date</th></tr></thead>
+                  <tbody>
+                    {newsletterCampaigns.map((campaign) => (
+                      <tr key={campaign.id}>
+                        <td>{campaign.subject}</td>
+                        <td>{campaign.recipientCount}</td>
+                        <td>{campaign.sent}</td>
+                        <td>{campaign.failed}</td>
+                        <td>{campaign.createdAt ? new Date(campaign.createdAt).toLocaleString() : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </>
       );
     }
 

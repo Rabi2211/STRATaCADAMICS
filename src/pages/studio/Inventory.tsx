@@ -10,6 +10,8 @@ export default function StudioInventory() {
   const [isAdjustingStock, setIsAdjustingStock] = useState(false);
   const [stockDraft, setStockDraft] = useState<Record<string, number>>({});
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     let active = true;
@@ -75,6 +77,15 @@ export default function StudioInventory() {
     anchor.click();
     URL.revokeObjectURL(url);
   };
+
+  // Calculate pagination values
+  const totalPages = Math.max(1, Math.ceil(brandRows.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedBrandRows = brandRows.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [brand?.id, brandRows.length, sortDirection]);
 
   return (
     <DashboardLayout
@@ -160,7 +171,7 @@ export default function StudioInventory() {
                 <th>Quantity</th>
                 <th>Actions</th>
               </tr>
-              {brandRows.map((product) => (
+              {paginatedBrandRows.map((product) => (
                 <tr key={product.id}>
                   <td>☐</td>
                   <td>
@@ -200,7 +211,20 @@ export default function StudioInventory() {
           </table>
         </div>
         <div className="pager">
-          <span>Showing 1–{brandRows.length} of {brandRows.length} products</span>
+          <span>
+            {brandRows.length === 0
+              ? "Showing 0 of 0 products"
+              : `Showing ${((safeCurrentPage - 1) * pageSize) + 1}–${Math.min(safeCurrentPage * pageSize, brandRows.length)} of ${brandRows.length} products`}
+          </span>
+          {brandRows.length > 0 && (
+            <span>
+              <button type="button" className="btn" disabled={safeCurrentPage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Previous</button>
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                <button key={page} type="button" className={page === safeCurrentPage ? "on" : "btn"} onClick={() => setCurrentPage(page)}>{page}</button>
+              ))}
+              <button type="button" className="btn" disabled={safeCurrentPage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}>Next</button>
+            </span>
+          )}
           <button className="btn pri" type="button" onClick={handleSaveStock}>Save changes</button>
         </div>
       </section>

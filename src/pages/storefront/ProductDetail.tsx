@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import StoreLayout from "../../components/StoreLayout";
 import { addToCart } from "../../lib/cart";
 import { getProductById } from "../../data/store";
+import { trackProductView } from "../../lib/store-api";
 
 function formatCurrency(value: number) {
   return `R${value.toFixed(2)}`;
@@ -19,6 +20,11 @@ export default function ProductDetailPage() {
     }
 
     return getProductById(productId);
+  }, [productId]);
+
+  useEffect(() => {
+    if (!productId) return;
+    void trackProductView(productId).catch(() => undefined);
   }, [productId]);
 
   if (!productData) {
@@ -52,20 +58,26 @@ export default function ProductDetailPage() {
 
   return (
     <StoreLayout>
-      <main style={{ maxWidth: 1180, margin: "32px auto", padding: "0 20px 80px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
+      <main className="product-detail" style={{ maxWidth: 1180, margin: "32px auto", padding: "0 20px 80px" }}>
+        <div className="product-detail__topbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
           <Link to="/men" style={{ color: "#1d1a17", textDecoration: "none" }}>← Back to shop</Link>
           {brand && <span style={{ color: "#5f6b5b", fontWeight: 600 }}>{brand.name}</span>}
         </div>
 
-        <div style={{ display: "grid", gap: 24, gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, .8fr)" }}>
-          <section style={{ border: "1px solid #e9e1d7", background: "#fff", borderRadius: 18, padding: 20 }}>
-            <div style={{ minHeight: 500, borderRadius: 18, background: "linear-gradient(135deg, #efe4d5 0%, #d9d0c7 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>
-              {product.name.slice(0, 1).toUpperCase()}
-            </div>
+        <div className="product-detail__layout" style={{ display: "grid", gap: 24, gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, .8fr)" }}>
+          <section className="product-detail__gallery" style={{ border: "1px solid #e9e1d7", background: "#fff", borderRadius: 18, padding: 20 }}>
+            {product.imageUrl ? (
+              <div className="product-detail__gallery-hero" style={{ minHeight: 500, borderRadius: 18, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#f7f2ec" }}>
+                <img src={product.imageUrl} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            ) : (
+              <div className="product-detail__gallery-hero" style={{ minHeight: 500, borderRadius: 18, background: "linear-gradient(135deg, #efe4d5 0%, #d9d0c7 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>
+                {product.name.slice(0, 1).toUpperCase()}
+              </div>
+            )}
           </section>
 
-          <aside style={{ border: "1px solid #e9e1d7", background: "#fff", borderRadius: 18, padding: 20, height: "fit-content" }}>
+          <aside className="product-detail__aside" style={{ border: "1px solid #e9e1d7", background: "#fff", borderRadius: 18, padding: 20, height: "fit-content" }}>
             <div style={{ color: "#756d66", textTransform: "uppercase", letterSpacing: 1.2, fontSize: 12, fontWeight: 700 }}>{product.category}</div>
             <h1 style={{ marginTop: 8, marginBottom: 8, fontSize: "clamp(2rem, 4vw, 2.8rem)" }}>{product.name}</h1>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -76,7 +88,7 @@ export default function ProductDetailPage() {
 
             <div style={{ fontSize: 30, fontWeight: 700, marginBottom: 18 }}>{formatCurrency(product.price)}</div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+            <div className="product-detail__qty" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
               <span style={{ color: "#4d5d4b" }}>Qty</span>
               <button type="button" onClick={() => setQuantity((current) => Math.max(1, current - 1))} className="btn btn--small" style={{ minWidth: 36 }}>−</button>
               <strong>{quantity}</strong>
@@ -106,17 +118,17 @@ export default function ProductDetailPage() {
           </aside>
         </div>
 
-        <section style={{ marginTop: 28, border: "1px solid #e9e1d7", background: "#fff", borderRadius: 18, padding: 20 }}>
+        <section className="product-detail__section" style={{ marginTop: 28, border: "1px solid #e9e1d7", background: "#fff", borderRadius: 18, padding: 20 }}>
           <h2 style={{ marginTop: 0 }}>Product details</h2>
           <p style={{ color: "#4a463f", lineHeight: 1.8 }}>{product.description}</p>
-          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+          <div className="product-detail__feature-grid" style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
             <div style={{ background: "#f8f5f1", borderRadius: 12, padding: 12 }}><strong>Material</strong><div>Premium cotton blend</div></div>
             <div style={{ background: "#f8f5f1", borderRadius: 12, padding: 12 }}><strong>Fit</strong><div>Relaxed, modern silhouette</div></div>
             <div style={{ background: "#f8f5f1", borderRadius: 12, padding: 12 }}><strong>Care</strong><div>Gentle cold wash</div></div>
           </div>
         </section>
 
-        <section style={{ marginTop: 28, border: "1px solid #e9e1d7", background: "#fff", borderRadius: 18, padding: 20 }}>
+        <section className="product-detail__section" style={{ marginTop: 28, border: "1px solid #e9e1d7", background: "#fff", borderRadius: 18, padding: 20 }}>
           <h2 style={{ marginTop: 0 }}>Customer reviews</h2>
           <div style={{ display: "grid", gap: 14 }}>
             {reviews.map((review) => (

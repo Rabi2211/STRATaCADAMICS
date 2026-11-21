@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FOOTER_COLUMNS } from "../data/storefront";
+import { subscribeToNewsletter } from "../lib/newsletter-store";
 
 const POLICY_LINKS: Record<string, string> = {
   "About": "/about",
@@ -16,14 +17,30 @@ const POLICY_LINKS: Record<string, string> = {
 export default function StoreFooter() {
   const [email, setEmail] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubscribe = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubscribe = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setError(null);
     if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+      setError("Please enter a valid email address.");
       return;
     }
-    setIsSubscribed(true);
-    setEmail("");
+    setIsLoading(true);
+    try {
+      const res = await subscribeToNewsletter(email);
+      if (res.ok) {
+        setIsSubscribed(true);
+        setEmail("");
+      } else {
+        setError("Something went wrong, please try again.");
+      }
+    } catch (subscribeError) {
+      setError(subscribeError instanceof Error ? subscribeError.message : "Something went wrong, please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -72,13 +89,16 @@ export default function StoreFooter() {
                 placeholder="Enter your email address"
                 aria-label="Email address"
               />
-              <button type="submit" aria-label="Subscribe">➤</button>
+              <button type="submit" aria-label="Subscribe" disabled={isLoading}>
+                {isLoading ? "Subscribing..." : "➤"}
+              </button>
             </form>
             {isSubscribed ? (
               <small style={{ color: "#dfe7dc" }}>Subscribed — welcome aboard.</small>
             ) : (
               <small>CLUB.STRATa</small>
             )}
+            {error && <div className="error-message">{error}</div>}
           </div>
         </div>
 

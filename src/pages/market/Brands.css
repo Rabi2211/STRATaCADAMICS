@@ -56,9 +56,10 @@
   }
 
   .dash .wrap {
-    overflow-y: auto;
+    overflow-x: auto;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
-    max-height: 70vh;
+    max-height: none;
   }
 
   .dash .brands-table {

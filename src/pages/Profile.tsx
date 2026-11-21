@@ -361,20 +361,14 @@ export default function ProfilePage() {
         }
 
         @media (max-width: 600px) {
-          .profile-actions {
-            align-items: stretch;
-          }
-
-          .profile-action--primary {
-            width: 100%;
-            flex: 1 1 100%;
-          }
-        }
-
-        @media (max-width: 520px) {
           .profile-page {
-            margin: 28px auto;
+            margin: 24px auto;
             padding: 16px;
+          }
+
+          .profile-header {
+            align-items: flex-start;
+            flex-direction: column;
           }
 
           .profile-card--details {
@@ -382,12 +376,46 @@ export default function ProfilePage() {
           }
 
           .profile-summary {
+            flex-direction: column;
             align-items: flex-start;
+          }
+
+          .profile-detail-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .profile-actions {
+            align-items: stretch;
+            width: min(100%, 290px);
+            margin: 0 auto;
+          }
+
+          .profile-action {
+            width: 100%;
+            min-height: 42px;
+            font-size: 0.95rem;
+          }
+
+          .profile-action--primary {
+            max-width: 240px;
+            margin: 0 auto;
+          }
+        }
+
+        @media (max-width: 520px) {
+          .profile-page {
+            margin: 20px auto;
+            padding: 12px;
+          }
+
+          .profile-card--details {
+            padding: 18px 16px;
           }
 
           .profile-actions {
             flex-direction: column;
             align-items: stretch;
+            width: 100%;
           }
 
           .profile-action {

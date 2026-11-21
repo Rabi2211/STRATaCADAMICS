@@ -1,0 +1,224 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: newsletterSubscribers
+// Document ID: SHA-256 hash of normalized lowercase email. Written by Admin SDK only.
+// Collection: newsletterCampaigns
+// Fields: subject, content, sent, failed, recipientCount, createdBy, createdAt. Admin read, Admin SDK write.
+// Collection: blogPosts
+// Fields: id, title, category, author, date, content, status, ownerUid. Public reads only Published.
+// Collection: products
+// Fields: id, brandId, name, sku, category, price, available, status, ownerUid. Public reads only public statuses.
+// Collection: brands
+// Fields: id, name, description, accent, abbreviation, ownerUid. Public read metadata; admin write.
+// Collection: storeSettings
+// Document: market. Fields: shippingPolicy, notifications, supportEmail, storeName, storeDescription. Admin write.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() { return request.auth != null; }
+
+    function isVerified() {
+      return isAuthenticated() && request.auth.token.email_verified == true;
+    }
+
+    function profileData() {
+      return exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data
+        : null;
+    }
+
+    function isAdmin() {
+      return isVerified() && profileData() != null && profileData().role == 'admin';
+    }
+
+    function isBrandOwner() {
+      return isVerified() && profileData() != null && profileData().role == 'brand-owner';
+    }
+
+    function assignedBrandIds() {
+      return isBrandOwner() && 'assignedBrandIds' in profileData()
+        && profileData().assignedBrandIds is list
+        ? profileData().assignedBrandIds
+        : [];
+    }
+
+    function isAssignedBrand(brandId) {
+      return isBrandOwner()
+        && brandId is string
+        && brandId in assignedBrandIds()
+        && exists(/databases/$(database)/documents/brands/$(brandId))
+        && get(/databases/$(database)/documents/brands/$(brandId)).data.ownerUid == request.auth.uid;
+    }
+
+    function ownsRecord() {
+      return isVerified() && 'ownerUid' in resource.data
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    function createsOwnRecord() {
+      return isVerified() && 'ownerUid' in request.resource.data
+        && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    function ownerUidUnchanged() {
+      return 'ownerUid' in resource.data
+        && 'ownerUid' in request.resource.data
+        && request.resource.data.ownerUid == resource.data.ownerUid;
+    }
+
+    function isPublicProductStatus(status) {
+      return status in ['ACTIVE', 'Active', 'LOW_STOCK', 'Low stock', 'PREORDER', 'Preorder'];
+    }
+
+    function validBlogPost() {
+      return request.resource.data.keys().hasAll([
+        'id', 'title', 'category', 'author', 'date', 'content', 'status', 'ownerUid'
+      ])
+      && request.resource.data.id is string
+      && request.resource.data.title is string
+      && request.resource.data.category is string
+      && request.resource.data.author is string
+      && request.resource.data.date is string
+      && request.resource.data.content is string
+      && request.resource.data.status in ['Published', 'Drafts']
+      && request.resource.data.ownerUid is string;
+    }
+
+    function validProduct() {
+      return request.resource.data.keys().hasAll([
+        'id', 'brandId', 'name', 'sku', 'category', 'price', 'available', 'status', 'ownerUid'
+      ])
+      && request.resource.data.id is string
+      && request.resource.data.brandId is string
+      && request.resource.data.name is string
+      && request.resource.data.sku is string
+      && request.resource.data.category is string
+      && request.resource.data.price is number
+      && request.resource.data.available is number
+      && request.resource.data.available >= 0
+      && request.resource.data.status in ['ACTIVE', 'Active', 'DRAFT', 'Draft', 'LOW_STOCK', 'Low stock', 'PREORDER', 'Preorder']
+      && request.resource.data.ownerUid is string;
+    }
+
+    function validBrand() {
+      return request.resource.data.keys().hasAll([
+        'id', 'name', 'description', 'accent', 'abbreviation', 'ownerUid'
+      ])
+      && request.resource.data.id is string
+      && request.resource.data.name is string
+      && request.resource.data.name.size() > 0
+      && request.resource.data.description is string
+      && request.resource.data.accent is string
+      && request.resource.data.abbreviation is string
+      && request.resource.data.ownerUid is string;
+    }
+
+    function validStoreSettings() {
+      return request.resource.data.keys().hasAll([
+        'storeName', 'supportEmail', 'storeDescription', 'shippingPolicy', 'notifications'
+      ])
+      && request.resource.data.storeName is string
+      && request.resource.data.supportEmail is string
+      && request.resource.data.storeDescription is string
+      && request.resource.data.shippingPolicy is string
+      && request.resource.data.notifications is map;
+    }
+
+    function validOrder() {
+      return request.resource.data.keys().hasAll([
+        'userId', 'status', 'total', 'items'
+      ])
+      && request.resource.data.userId is string
+      && request.resource.data.status in ['Pending', 'Paid', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled', 'Failed', 'success', 'pending', 'cancelled', 'failed', 'demo']
+      && request.resource.data.total is number
+      && request.resource.data.total >= 0
+      && request.resource.data.items is list;
+    }
+
+    match /blogPosts/{postId} {
+      allow read: if (resource.data.status == 'Published')
+        || isAdmin()
+        || (isBrandOwner() && ownsRecord());
+      allow create: if createsOwnRecord()
+        && validBlogPost()
+        && (isAdmin() || isBrandOwner());
+      allow update: if validBlogPost()
+        && ownerUidUnchanged()
+        && (isAdmin() || (isBrandOwner() && ownsRecord()));
+      allow delete: if isAdmin() || (isBrandOwner() && ownsRecord());
+    }
+
+    match /products/{productId} {
+      allow read: if (resource.data.status is string && isPublicProductStatus(resource.data.status))
+        || isAdmin()
+        || (isBrandOwner() && isAssignedBrand(resource.data.brandId));
+      allow create: if validProduct()
+        && createsOwnRecord()
+        && (isAdmin() || (isBrandOwner() && isAssignedBrand(request.resource.data.brandId)));
+      allow update: if validProduct()
+        && ownerUidUnchanged()
+        && (isAdmin()
+          || (isBrandOwner()
+            && ownsRecord()
+            && isAssignedBrand(resource.data.brandId)
+            && isAssignedBrand(request.resource.data.brandId)));
+      allow delete: if isAdmin()
+        || (isBrandOwner() && ownsRecord() && isAssignedBrand(resource.data.brandId));
+    }
+
+    match /brands/{brandId} {
+      allow read: if true;
+      allow create: if isAdmin() && validBrand();
+      allow update: if isAdmin() && validBrand()
+        && ownerUidUnchanged();
+      allow delete: if isAdmin();
+    }
+
+    match /storeSettings/{settingId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && validStoreSettings();
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAdmin()
+        || (isVerified() && resource.data.userId == request.auth.uid);
+      allow create: if isVerified()
+        && validOrder()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() && validOrder();
+      allow delete: if isAdmin();
+    }
+
+    match /userProfiles/{uid} {
+      allow read: if isVerified() && (request.auth.uid == uid || isAdmin());
+      allow create: if isVerified()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'role', 'createdAt'])
+        && request.resource.data.role == 'customer';
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['email', 'name', 'role', 'createdAt', 'assignedBrandIds'])
+        && request.resource.data.role in ['customer', 'brand-owner', 'admin']
+        && (!('assignedBrandIds' in request.resource.data)
+          || request.resource.data.assignedBrandIds is list);
+      allow delete: if false;
+    }
+
+    match /newsletterSubscribers/{subscriberId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /newsletterCampaigns/{campaignId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

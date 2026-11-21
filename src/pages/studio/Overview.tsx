@@ -138,23 +138,11 @@ export default function StudioOverview() {
 
       points.push({
         day: i,
-        revenue: Math.max(20, dayRevenue * 0.5 + Math.random() * 200),
+        revenue: dayRevenue,
       });
     }
 
-    return points.length > 0 ? points : generatePlaceholderPoints();
-  };
-
-  const generatePlaceholderPoints = () => {
-    return [
-      { day: 0, revenue: 138 },
-      { day: 1, revenue: 130 },
-      { day: 2, revenue: 126 },
-      { day: 3, revenue: 116 },
-      { day: 4, revenue: 127 },
-      { day: 5, revenue: 124 },
-      { day: 6, revenue: 103 },
-    ];
+    return points;
   };
 
   const chartData = calculateSalesData();
